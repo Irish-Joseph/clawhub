@@ -1,0 +1,19 @@
+Resolving clawhub:excalidraw-mcp@1.0.0…
+  Package   excalidraw-mcp@1.0.0
+  Type      bundle-plugin
+  ClawHub   http://127.0.0.1:55890/plugins/excalidraw-mcp
+╭─ ClawHub Security Audit ─────────────────────────────────────────────────────────────╮
+│ excalidraw-mcp@1.0.0                                                                 │
+│                                                                                      │
+│ Outcome: [32mSafe[39m                                                                        │
+│                                                                                      │
+│ Overview:                                                                            │
+│ Mock ClawScan marked the local e2e fixture clean.                                    │
+│                                                                                      │
+│ Details: http://127.0.0.1:55890/plugins/excalidraw-mcp/security-audit?version=1.0.0  │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+Downloading bundle excalidraw-mcp@1.0.0 from ClawHub…
+Extracting /private/tmp/openclaw/openclaw-clawhub-package-ZyrCcA/excalidraw-mcp.zip…
+Installing to /Users/patrickerichsen/Git/openclaw/clawhub-claw-723-manual/.artifacts/manual-curation/ocm/envs/manual-integrations-proof/.openclaw/extensions/excalidraw-mcp…
+Installed plugin: excalidraw-mcp
+Saved for the next Gateway start.

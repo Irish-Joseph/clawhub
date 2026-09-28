@@ -1,0 +1,99 @@
+{
+  "status": "passed",
+  "mode": "before-after",
+  "scenario": "manual-company-bundles",
+  "provider": "local Convex + Chromium + OpenClaw 2026.9.6",
+  "baseline": "Same real local New catalog before publication; no fixture bundles",
+  "candidate": "55f67573da; two real published fixture bundles",
+  "localUrl": "http://127.0.0.1:55890/plugins?new=true",
+  "simulatedSecurity": [
+    "ClawScan",
+    "TruffleHog"
+  ],
+  "realSecurity": [
+    "Plugin Inspector"
+  ],
+  "virusTotal": "not run; key unavailable",
+  "lanes": [
+    {
+      "name": "baseline",
+      "steps": [
+        {
+          "slug": "catalog",
+          "name": "Before: no curated fixtures",
+          "screenshot": "catalog.png",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "candidate",
+      "steps": [
+        {
+          "slug": "catalog",
+          "name": "After: two curated fixtures",
+          "screenshot": "catalog.png",
+          "status": "passed"
+        },
+        {
+          "slug": "godaddy-detail",
+          "name": "GoDaddy real package detail",
+          "screenshot": "godaddy-detail.png",
+          "status": "passed"
+        },
+        {
+          "slug": "excalidraw-detail",
+          "name": "Excalidraw real package detail",
+          "screenshot": "excalidraw-detail.png",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "downloads": [
+    {
+      "name": "godaddy-mcp",
+      "version": "1.0.0",
+      "files": 5,
+      "sha256": "ef3655a74ddec780bb8f71deabbb0d8e98cac844ebabcbb3de81e8176dda7e3d",
+      "simulatedSecurity": [
+        "ClawScan",
+        "TruffleHog"
+      ]
+    },
+    {
+      "name": "excalidraw-mcp",
+      "version": "1.0.0",
+      "files": 5,
+      "sha256": "1882bb7cce590eae8fbe0721824414e37b5aad7fc274e99fb9cb8d92ca25a9ae",
+      "simulatedSecurity": [
+        "ClawScan",
+        "TruffleHog"
+      ]
+    }
+  ],
+  "installedRuntime": {
+    "openclaw": "2026.9.6",
+    "configOverrides": false,
+    "installedBundleDefinitionsOnly": true,
+    "servers": [
+      "excalidraw",
+      "godaddy"
+    ],
+    "diagnostics": [],
+    "calls": [
+      {
+        "server": "godaddy",
+        "tool": "domains_check_availability",
+        "isError": false,
+        "contentBlocks": 1
+      },
+      {
+        "server": "excalidraw",
+        "tool": "read_me",
+        "isError": false,
+        "contentBlocks": 1
+      }
+    ]
+  }
+}

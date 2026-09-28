@@ -1,0 +1,24 @@
+{
+  "openclaw": "2026.9.6",
+  "configOverrides": false,
+  "installedBundleDefinitionsOnly": true,
+  "servers": [
+    "excalidraw",
+    "godaddy"
+  ],
+  "diagnostics": [],
+  "calls": [
+    {
+      "server": "godaddy",
+      "tool": "domains_check_availability",
+      "isError": false,
+      "contentBlocks": 1
+    },
+    {
+      "server": "excalidraw",
+      "tool": "read_me",
+      "isError": false,
+      "contentBlocks": 1
+    }
+  ]
+}

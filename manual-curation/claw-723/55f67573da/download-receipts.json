@@ -1,0 +1,22 @@
+[
+  {
+    "name": "godaddy-mcp",
+    "version": "1.0.0",
+    "files": 5,
+    "sha256": "ef3655a74ddec780bb8f71deabbb0d8e98cac844ebabcbb3de81e8176dda7e3d",
+    "simulatedSecurity": [
+      "ClawScan",
+      "TruffleHog"
+    ]
+  },
+  {
+    "name": "excalidraw-mcp",
+    "version": "1.0.0",
+    "files": 5,
+    "sha256": "1882bb7cce590eae8fbe0721824414e37b5aad7fc274e99fb9cb8d92ca25a9ae",
+    "simulatedSecurity": [
+      "ClawScan",
+      "TruffleHog"
+    ]
+  }
+]
