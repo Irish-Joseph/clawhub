@@ -4615,6 +4615,48 @@ export const seedCompanyPluginImportFixtures = internalMutation({
   },
 });
 
+// Exact, local-only cleanup of the retired crawl fixtures. Catalog snapshot rows have no
+// curated releases and must never be removed by this workflow.
+export const removeRetiredCompanyPluginCrawlFixtures = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<{ removed: string[]; alreadyRemoved: string[] }> => {
+    if (!isLocalDevAuthEnabled()) throw new Error("Crawl cleanup requires local dev auth");
+    const removed: string[] = [];
+    const alreadyRemoved: string[] = [];
+    for (const slug of ["boltz-api-cli", "expo", "mixpanel-headless", "supabase", "temporal"]) {
+      const name = `@openai/${slug}-service-integration`;
+      const pkg = await ctx.db
+        .query("packages")
+        .withIndex("by_name", (q) => q.eq("normalizedName", name))
+        .unique();
+      if (!pkg || pkg.softDeletedAt) {
+        alreadyRemoved.push(name);
+        continue;
+      }
+      const owner = await ctx.db.get(pkg.ownerUserId);
+      const release = pkg.latestReleaseId ? await ctx.db.get(pkg.latestReleaseId) : null;
+      if (
+        owner?.handle !== "cli-admin" ||
+        release?.source?.repo !== "openai/plugins" ||
+        release.source.path !== `plugins/${slug}` ||
+        release.createdBy !== owner._id ||
+        release.curation?.integration !== slug ||
+        release.curation.job !== "service-integration" ||
+        release.curation.format !== "codex" ||
+        release.curation.authorship !== "registry" ||
+        !release.files.some((file) => file.path === "CLAWHUB_SOURCE.json")
+      )
+        throw new Error(`Refusing to remove a non-crawl package: ${name}`);
+      await ctx.runMutation(internal.packages.softDeletePackageInternal, {
+        userId: owner._id,
+        name,
+      });
+      removed.push(name);
+    }
+    return { removed, alreadyRemoved };
+  },
+});
+
 type OrgDeletionFixtureArgs = {
   handle: string;
   displayName: string;
