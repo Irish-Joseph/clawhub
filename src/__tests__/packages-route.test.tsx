@@ -160,6 +160,69 @@ describe("plugins route", () => {
     ).toMatchObject({ new: true, cursor: "new:next", featured: undefined });
   });
 
+  it("loads the full category when opening Computer use directly", async () => {
+    const route = await loadRoute();
+    const search = route.__config.validateSearch?.({ category: "computer-use" }) ?? {};
+    const deps = route.__config.loaderDeps?.({ search });
+    const { loadPluginsPageData } = await import("../routes/plugins/index");
+
+    await loadPluginsPageData(deps ?? {});
+
+    expect(fetchPluginCatalogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: "computer-use", featured: undefined }),
+    );
+  });
+
+  it("redirects an old Featured category link to the full category without its cursor", async () => {
+    const route = await loadRoute();
+    const beforeLoad = (
+      route.__config as {
+        beforeLoad?: (args: { search: Record<string, unknown> }) => void;
+      }
+    ).beforeLoad;
+    const search =
+      route.__config.validateSearch?.({
+        category: "computer-use",
+        featured: "true",
+        sort: "recommended",
+        cursor: "featured:next",
+        topic: "browser",
+        view: "grid",
+      }) ?? {};
+
+    expect(() => beforeLoad?.({ search })).toThrow();
+    expect(redirectMock).toHaveBeenCalledWith({
+      to: "/plugins",
+      replace: true,
+      search: expect.objectContaining({
+        category: "computer-use",
+        featured: undefined,
+        cursor: undefined,
+        topic: "browser",
+        view: "grid",
+      }),
+    });
+  });
+
+  it("opens the full category when leaving the global Featured tab", async () => {
+    searchMock = { featured: true, sort: "recommended", cursor: "featured:next" };
+    const route = await loadRoute();
+    const Component = route.__config.component as ComponentType;
+    render(<Component />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Computer use" }));
+
+    const navigation = navigateMock.mock.calls.at(-1)?.[0];
+    const search = route.__config.validateSearch?.(navigation.search(searchMock)) ?? {};
+    const deps = route.__config.loaderDeps?.({ search });
+    const { loadPluginsPageData } = await import("../routes/plugins/index");
+    await loadPluginsPageData(deps ?? {});
+
+    expect(fetchPluginCatalogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: "computer-use", featured: undefined, cursor: undefined }),
+    );
+  });
+
   it("loads New plugins by creation time with the shared recent window", async () => {
     const { loadPluginsPageData } = await import("../routes/plugins/index");
     const { DISCOVERY_RECENT_WINDOW_MS } = await import("../../convex/lib/discoveryWindows");
@@ -1389,14 +1452,14 @@ describe("plugins route", () => {
     });
   });
 
-  it("selects Featured within the current plugin category", async () => {
+  it("selects All within the current plugin category", async () => {
     searchMock = { category: "security" };
     const route = await loadRoute();
     const Component = route.__config.component as ComponentType;
 
     render(<Component />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Featured" }));
+    fireEvent.click(screen.getByRole("radio", { name: "All" }));
 
     const lastCall = navigateMock.mock.calls.at(-1)?.[0] as {
       replace?: boolean;
@@ -1407,8 +1470,8 @@ describe("plugins route", () => {
       category: "security",
       cursor: undefined,
       family: undefined,
-      featured: true,
-      sort: "recommended",
+      featured: undefined,
+      sort: undefined,
     });
   });
 
@@ -1698,7 +1761,7 @@ describe("plugins route", () => {
   });
 
   it("keeps browse sort choices when only a category is active", async () => {
-    searchMock = { category: "security", featured: true };
+    searchMock = { category: "security" };
     loaderDataMock = {
       items: [
         {
@@ -1720,9 +1783,7 @@ describe("plugins route", () => {
 
     render(<Component />);
 
-    expect(screen.getByRole("radio", { name: "Featured" }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
+    expect(screen.getByRole("radio", { name: "All" }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByRole("radio", { name: "Official" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "New" })).toBeTruthy();
     expect(screen.queryByRole("radio", { name: "Relevance" })).toBeNull();

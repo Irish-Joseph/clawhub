@@ -45,6 +45,9 @@ type PluginBrowseTab = VisiblePluginSort | "official" | "featured" | "new";
 
 const PLUGINS_PAGE_SIZE = 25;
 const PLUGIN_CATALOG_REQUEST_TIMEOUT_MS = 5_000;
+const PLUGIN_CATEGORY_TABS = CATALOG_TABS.map((tab) =>
+  tab.value === "featured" ? { value: "recommended", label: "All" } : tab,
+);
 
 // One navigation's input intent, never URL/history state. Reloads and preloads
 // cannot recreate it; the loader consumes it before dispatch so retries are unmarked.
@@ -325,7 +328,7 @@ export const Route = createFileRoute("/plugins/")({
         : undefined;
     const newOnly =
       !q && !official && (search.new === true || search.new === "true" || search.new === "1");
-    const defaultFeatured = !q && search.sort === undefined && !official && !newOnly;
+    const defaultFeatured = !q && !category && search.sort === undefined && !official && !newOnly;
     const legacyInstallSort = search.sort === "installs";
     const noExplicitSort = search.sort === undefined;
     const staleImplicitFilteredCursor =
@@ -360,13 +363,15 @@ export const Route = createFileRoute("/plugins/")({
       search.sort !== "downloads" &&
       search.sort !== "trending" &&
       !(hasQuery && search.sort === "relevance");
-    const staleFeatured = Boolean(hasQuery && search.featured);
+    // Category navigation covers the whole category, including old Featured links.
+    const staleFeatured = Boolean((hasQuery || search.category) && search.featured);
     if (incompatibleSort || staleFeatured) {
       throw redirect({
         to: "/plugins",
         search: {
           ...search,
           featured: staleFeatured ? undefined : search.featured,
+          cursor: staleFeatured ? undefined : search.cursor,
           sort: incompatibleSort ? undefined : search.sort,
         },
         replace: true,
@@ -574,6 +579,7 @@ function PluginsIndex() {
         family: undefined,
         category,
         topic: undefined,
+        featured: undefined,
       }),
       replace: true,
     });
@@ -760,7 +766,7 @@ function PluginsIndex() {
         <BrowseControlsRow>
           <BrowseTabs
             ariaLabel="Sort order"
-            options={CATALOG_TABS}
+            options={search.category ? PLUGIN_CATEGORY_TABS : CATALOG_TABS}
             value={activeBrowseTab}
             onChange={handleBrowseTabChange}
           />
