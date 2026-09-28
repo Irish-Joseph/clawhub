@@ -31,6 +31,7 @@ import semver from "semver";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
+import { applyCanonicalReplacement } from "./curatedPlugins";
 import {
   action,
   internalAction,
@@ -58,6 +59,10 @@ import {
 } from "./lib/artifactModeration";
 import { generatePackageChangelogPreview } from "./lib/changelog";
 import { sha256Hex } from "./lib/clawpack";
+import {
+  curatedPluginProvenanceValidator,
+  validateCuratedPluginPublisher,
+} from "./lib/curatedPluginProvenance";
 import {
   ACTIVITY_TREND_DAYS,
   buildDailyMetricTrends,
@@ -979,6 +984,7 @@ type PackageDigestLike = Pick<
   | "stats"
   | "recommendedScore"
   | "scanStatus"
+  | "canonicalPackageId"
   | "softDeletedAt"
 > & { pluginCategory?: string };
 type PackageOwnerAccessRef = Pick<PackageDigestLike, "ownerUserId" | "ownerPublisherId"> &
@@ -1192,11 +1198,16 @@ async function viewerCanManagePackageOwner(
 
 async function canViewerReadPackage(
   ctx: DbReaderCtx,
-  digest: Pick<PackageDigestLike, "channel" | "scanStatus" | "ownerUserId" | "ownerPublisherId"> &
-    Partial<Pick<PackageDigestLike, "ownerKind">>,
+  digest: Pick<
+    PackageDigestLike,
+    "channel" | "scanStatus" | "ownerUserId" | "ownerPublisherId" | "stats"
+  > &
+    Partial<Pick<PackageDigestLike, "ownerKind" | "latestVersion" | "canonicalPackageId">> &
+    Partial<Pick<Doc<"packages">, "latestReleaseId" | "latestVersionSummary">>,
   viewerUserId: Id<"users"> | undefined,
   membershipCache?: Map<string, Promise<boolean>>,
 ) {
+  if (digest.canonicalPackageId || hasNoPublishedPackageVersions(digest)) return false;
   if (!requiresPrivilegedPackageAccess(digest)) return true;
   const isPrivilegedViewer = await viewerCanAccessPackageOwner(
     ctx,
@@ -1222,9 +1233,16 @@ function resolvePublicPackageScanStatus(
 }
 
 function hasNoPublishedPackageVersions(
-  pkg: Pick<Doc<"packages">, "latestReleaseId" | "latestVersionSummary" | "stats">,
+  pkg: Partial<Pick<Doc<"packages">, "latestReleaseId" | "latestVersionSummary" | "stats">> & {
+    latestVersion?: string;
+  },
 ) {
-  return !pkg.latestReleaseId && !pkg.latestVersionSummary && (pkg.stats?.versions ?? 0) <= 0;
+  return (
+    !pkg.latestReleaseId &&
+    !pkg.latestVersionSummary &&
+    !pkg.latestVersion &&
+    (pkg.stats?.versions ?? 0) <= 0
+  );
 }
 
 function normalizePublicPackageSourcePath(sourcePath: unknown) {
@@ -3469,13 +3487,14 @@ export const getByNameForViewerInternal = internalQuery({
   args: {
     name: v.string(),
     viewerUserId: v.optional(v.id("users")),
+    followCanonical: v.optional(v.boolean()),
   },
   handler: readPackageForViewer,
 });
 
 export async function readPackageForViewer(
   ctx: QueryCtx,
-  args: { name: string; viewerUserId?: Id<"users"> },
+  args: { name: string; viewerUserId?: Id<"users">; followCanonical?: boolean },
 ) {
   const snapshot = await readPackageSnapshotForViewer(ctx, args);
   if (!snapshot) return null;
@@ -3491,9 +3510,16 @@ export async function readPackageForViewer(
 
 async function readPackageSnapshotForViewer(
   ctx: QueryCtx,
-  args: { name: string; viewerUserId?: Id<"users"> },
+  args: { name: string; viewerUserId?: Id<"users">; followCanonical?: boolean },
 ) {
-  const pkg = await getReadablePackageByName(ctx, args.name, args.viewerUserId);
+  let pkg = await getReadablePackageByName(ctx, args.name, args.viewerUserId);
+  if (args.followCanonical && pkg?.canonicalPackageId) {
+    const target = await ctx.db.get(pkg.canonicalPackageId);
+    pkg =
+      target && !target.canonicalPackageId
+        ? await getReadablePackageByName(ctx, target.name, args.viewerUserId)
+        : null;
+  }
   if (!pkg) return null;
   const latestRelease = pkg.latestReleaseId ? await ctx.db.get(pkg.latestReleaseId) : null;
   const publicPackage = toPublicPackage(pkg, latestRelease);
@@ -9179,6 +9205,22 @@ async function publishPackageImpl(
     }
     ownerUserId = ownerTarget?.linkedUserId ?? actorUserId;
     ownerPublisherId = ownerTarget?.publisherId;
+    if (payload.curation) {
+      const publisher = ownerPublisherId
+        ? await runQueryRef<Doc<"publishers"> | null>(
+            ctx,
+            internalRefs.publishers.getByIdInternal,
+            { publisherId: ownerPublisherId },
+          )
+        : null;
+      validateCuratedPluginPublisher({
+        actor: actor ?? {},
+        publisher,
+        sourceRepo: effectiveSource?.repo,
+        sourcePath: effectiveSource?.path,
+        curation: payload.curation,
+      });
+    }
     if (existingTrustedPublisher && !manualOverrideReason && actor?.role !== "admin") {
       throw new ConvexError(
         "Manual publishes for packages with trusted publisher config require manualOverrideReason",
@@ -9187,6 +9229,16 @@ async function publishPackageImpl(
     publishActor = { kind: "user", userId: actorUserId };
   }
 
+  if (
+    payload.curation &&
+    (auth.kind !== "user" ||
+      !effectiveSource?.commit ||
+      !/^[a-f0-9]{40}$/.test(effectiveSource.commit))
+  ) {
+    throw new ConvexError(
+      "Curated plugins require a staff publish pinned to an exact GitHub commit",
+    );
+  }
   const displayName = payload.displayName?.trim() || name;
   const { files, legacyZipEntries } = await verifyPublishFileStorageMetadata(
     ctx,
@@ -9545,6 +9597,7 @@ async function publishPackageImpl(
     categoryClassification,
     clawManifestSummary: validatedClaw?.summary,
     source: effectiveSource,
+    curation: payload.curation ? { ...payload.curation, syncedAt: Date.now() } : undefined,
     trustedPublishTokenId: auth.kind === "github-actions" ? auth.publishToken._id : undefined,
     trustedPublishInventoryDigest: auth.kind === "github-actions" ? inventoryDigest : undefined,
   };
@@ -9596,7 +9649,13 @@ async function publishPackageImpl(
       toPackageInspectorPublishResponseFinding(finding, inspectorResult.metadata),
     ) ?? [];
 
-  if (options.stagePrePublicationChecks) {
+  // Curated imports require the normal checks even before global staging rollout.
+  // A caller can strengthen the gate, never opt out of the deployment policy.
+  if (
+    options.stagePrePublicationChecks ||
+    payload.requirePrepublicationChecks ||
+    payload.curation
+  ) {
     let existingRelease: Doc<"packageReleases"> | null = null;
     if (existingPackage) {
       existingRelease = await runQueryRef<Doc<"packageReleases"> | null>(
@@ -11986,6 +12045,19 @@ export const publishPendingReleaseInternal = internalMutation({
       }
     }
 
+    if (release.curation && !manualRecovery) {
+      if (pkg.canonicalPackageId)
+        throw new ConvexError("A replaced source cannot finish publication");
+      const actor = release.createdBy ? await ctx.db.get(release.createdBy) : null;
+      const publisher = pkg.ownerPublisherId ? await ctx.db.get(pkg.ownerPublisherId) : null;
+      validateCuratedPluginPublisher({
+        actor: actor ?? {},
+        publisher,
+        sourceRepo: release.source?.repo,
+        sourcePath: release.source?.path,
+        curation: release.curation,
+      });
+    }
     const now = Date.now();
     const firstPublishedRelease = hasNoPublishedPackageVersions(pkg);
     const pendingFamily = stringPendingField(metadata, "family", pkg.family) as PackageFamily;
@@ -12078,6 +12150,16 @@ export const publishPendingReleaseInternal = internalMutation({
       stats: { ...pkg.stats, versions: (pkg.stats?.versions ?? 0) + 1 },
       updatedAt: now,
     });
+    // Publish the new canonical artifact and remove replaced registry results in
+    // this same transaction, so public discovery never sees two winners.
+    for (const name of release.curation?.supersedes ?? []) {
+      await applyCanonicalReplacement(ctx, {
+        actorUserId: release.createdBy,
+        name,
+        targetName: pkg.name,
+        reason: `Reviewed company source replacement in ${release.version}`,
+      });
+    }
     await schedulePackageReleaseTagCleanup(ctx, pkg._id, cleanupAssignments);
 
     return {
@@ -12163,6 +12245,7 @@ export const insertReleaseInternal = internalMutation({
     categoryClassification: v.optional(pluginCategoryClassificationValidator),
     clawManifestSummary: v.optional(v.any()),
     source: v.optional(v.any()),
+    curation: v.optional(curatedPluginProvenanceValidator),
     trustedPublishTokenId: v.optional(v.id("packagePublishTokens")),
     trustedPublishInventoryDigest: v.optional(v.string()),
   },
@@ -12277,7 +12360,19 @@ export const insertReleaseInternal = internalMutation({
     if (args.channel === "official" && !publisherOfficial) {
       throw new ConvexError("Only official publishers may publish to the official channel");
     }
+    if (args.curation)
+      validateCuratedPluginPublisher({
+        actor,
+        publisher: ownerPublisher,
+        sourceRepo: args.source?.repo,
+        sourcePath: args.source?.path,
+        curation: args.curation,
+      });
     const existing = await getPackageByNormalizedName(ctx, normalizedName);
+    if (existing?.canonicalPackageId)
+      throw new ConvexError(
+        "This package has a canonical replacement; publish to that package instead",
+      );
     const existingIsReservation = isReservedPackagePlaceholder(existing);
     const nextNameLabel = typeof args.name === "string" ? args.name : "<unknown>";
     if (existing?.softDeletedAt) {
@@ -12488,6 +12583,7 @@ export const insertReleaseInternal = internalMutation({
       staticScan: args.staticScan,
       llmAnalysis: args.llmAnalysis,
       source: args.source,
+      curation: args.curation,
       createdBy: args.actorUserId,
       publishActor: args.publishActor,
       createdAt: now,

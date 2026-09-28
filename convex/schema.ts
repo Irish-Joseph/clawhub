@@ -6,6 +6,7 @@ import {
   canonicalTrendingCardValidator,
   canonicalTrendingSourceRefValidator,
 } from "./lib/canonicalTrending";
+import { curatedPluginProvenanceValidator } from "./lib/curatedPluginProvenance";
 import { EMBEDDING_DIMENSIONS } from "./lib/embeddings";
 import { editorialSelection, featuredPublication } from "./lib/featuredSelections";
 import {
@@ -254,6 +255,16 @@ const authRefreshTokens = defineTable({
   .index("by_expiration_time", ["expirationTime"]);
 
 const publishers = defineTable({
+  staffCustody: v.optional(
+    v.object({
+      repositoryOwner: v.string(),
+      repositoryOwnerId: v.number(),
+      sourceRepo: v.string(),
+      evidenceUrl: v.string(),
+      establishedAt: v.number(),
+      establishedBy: v.id("users"),
+    }),
+  ),
   kind: v.union(v.literal("user"), v.literal("org")),
   handle: v.string(),
   displayName: v.string(),
@@ -1753,6 +1764,7 @@ const skillTopicSearchDigest = defineTable({
   ]);
 
 const packages = defineTable({
+  canonicalPackageId: v.optional(v.id("packages")),
   name: v.string(),
   normalizedName: v.string(),
   displayName: v.string(),
@@ -1982,6 +1994,7 @@ const packageReleases = defineTable({
       checkedAt: v.number(),
     }),
   ),
+  curation: v.optional(curatedPluginProvenanceValidator),
   manualModeration: v.optional(packageReleaseModerationOverrideValidator),
   source: v.optional(v.any()),
   createdBy: v.id("users"),
@@ -1996,6 +2009,7 @@ const packageReleases = defineTable({
   .index("by_package_owner_deleted_created", ["packageId", "ownerDeletedBy", "createdAt"])
   .index("by_active_created", ["softDeletedAt", "createdAt"])
   .index("by_package_version", ["packageId", "version"])
+  .index("by_package_curated_hash", ["packageId", "curation.sourceContentHash"])
   .index("by_sha256hash", ["sha256hash"]);
 
 // Retained as review/apply history: regenerating a preview never erases an accepted decision.
@@ -2480,6 +2494,7 @@ const packagePublishUploadTickets = defineTable({
 }).index("by_publish_token", ["publishTokenId"]);
 
 const packageSearchDigest = defineTable({
+  canonicalPackageId: v.optional(v.id("packages")),
   packageId: v.id("packages"),
   name: v.string(),
   normalizedName: v.string(),
@@ -2545,6 +2560,7 @@ const packageSearchDigest = defineTable({
   });
 
 const packageTopicSearchDigest = defineTable({
+  canonicalPackageId: v.optional(v.id("packages")),
   packageId: v.id("packages"),
   name: v.string(),
   normalizedName: v.string(),
@@ -2677,6 +2693,7 @@ const packageTopicSearchDigest = defineTable({
   ]);
 
 const packagePluginCategorySearchDigest = defineTable({
+  canonicalPackageId: v.optional(v.id("packages")),
   packageId: v.id("packages"),
   name: v.string(),
   normalizedName: v.string(),

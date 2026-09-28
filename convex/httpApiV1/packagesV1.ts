@@ -128,6 +128,7 @@ const apiRefs = api as unknown as {
   };
 };
 const internalRefs = internal as unknown as {
+  curatedPlugins: { getSyncStateForUserInternal: unknown };
   packages: {
     countPublicPluginsInternal: unknown;
     getByNameForViewerInternal: unknown;
@@ -543,6 +544,7 @@ type SkillVersionLike = {
 };
 
 type ReleaseLike = {
+  curation?: Doc<"packageReleases">["curation"];
   _id: Id<"packageReleases">;
   packageId: Id<"packages">;
   version: string;
@@ -714,6 +716,7 @@ function toPackageVersionResponse(release: ReleaseLike, packageName: string) {
     clawManifestSummary: release.clawManifestSummary ?? null,
     verification,
     artifact: toReleaseArtifact(release, packageName),
+    curation: release.curation ?? null,
     sha256hash: release.sha256hash ?? null,
     vtAnalysis: release.vtAnalysis ?? null,
     skillSpectorAnalysis: release.skillSpectorAnalysis ?? null,
@@ -1330,6 +1333,7 @@ function toPackageMetadataResponse(
           displayName: owner.displayName ?? null,
           image: owner.image ?? null,
           official: owner.official === true,
+          ...(owner.staffCustody ? { staffCustody: owner.staffCustody } : {}),
         }
       : null,
   };
@@ -4451,6 +4455,24 @@ export async function packagesGetRouterV1Handler(ctx: ActionCtx, request: Reques
   const normalizedPackageName = tryNormalizePackageName(packageName);
   if (!normalizedPackageName) return text("Package not found", 404, rate.headers);
 
+  if (packageSegments[0] === "sync-state" && packageSegments.length === 1) {
+    const auth = await requireApiTokenUserOrResponse(ctx, request, rate.headers);
+    if (!auth.ok) return auth.response;
+    if (auth.user.role !== "admin") return text("Forbidden", 403, rate.headers);
+    const url = new URL(request.url);
+    const sourceHash = url.searchParams.get("sourceHash") ?? "";
+    const version = url.searchParams.get("version") ?? "";
+    if (!/^[a-f0-9]{64}$/.test(sourceHash) || !version || version.length > 200)
+      return text("Invalid source hash or version", 400, rate.headers);
+    const result = await runQueryRef(ctx, internalRefs.curatedPlugins.getSyncStateForUserInternal, {
+      actorUserId: auth.userId,
+      name: normalizedPackageName,
+      sourceHash,
+      version,
+    });
+    return json(result, 200, rate.headers);
+  }
+
   const viewerUserId = await getOptionalViewerUserIdForRequest(ctx, request);
   if (packageSegments[0] === "detail" && packageSegments.length === 1) {
     const version = new URL(request.url).searchParams.get("version")?.trim() || undefined;
@@ -4530,11 +4552,21 @@ export async function packagesGetRouterV1Handler(ctx: ActionCtx, request: Reques
   const detail = (await runQueryRef(ctx, internalRefs.packages.getByNameForViewerInternal, {
     name: normalizedPackageName,
     viewerUserId: viewerUserId ?? undefined,
+    followCanonical:
+      packageSegments[0] !== "versions" && !new URL(request.url).searchParams.has("version"),
   })) as {
     package: PublicPackageDocLike | null;
     latestRelease: ReleaseLike | null;
     owner: PublicPublisher | null;
   } | null;
+  if (detail?.package && detail.package.name !== normalizedPackageName) {
+    const target = new URL(request.url);
+    target.pathname = `/api/v1/packages/${encodeURIComponent(detail.package.name)}${packageSegments.length ? `/${packageSegments.map(encodeURIComponent).join("/")}` : ""}`;
+    return new Response(null, {
+      status: 307,
+      headers: mergeHeaders(rate.headers, { Location: target.toString() }, corsHeaders()),
+    });
+  }
   const skillDetail = detail?.package
     ? null
     : await getSkillDetailForRequest(ctx, normalizedPackageName, ownerHandle);

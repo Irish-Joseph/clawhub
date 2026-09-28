@@ -346,6 +346,22 @@ function utf8ByteLength(value: string): number {
   return bytes;
 }
 
+const CuratedPluginImportFields = {
+  supersedes: "string[]?",
+  integration: "string",
+  job: "string",
+  authorship: '"company"|"registry"',
+  repositoryId: "number",
+  ownerId: "number",
+  sourceContentHash: "string",
+  author: "string?",
+  omittedCapabilities: "string[]",
+  format: "string",
+} as const;
+export const CuratedPluginImportSchema = type({ "+": "reject", ...CuratedPluginImportFields });
+export type CuratedPluginImport = (typeof CuratedPluginImportSchema)[inferred];
+const CuratedPluginProvenanceSchema = type({ ...CuratedPluginImportFields, syncedAt: "number" });
+
 const PackagePublishMetadataFields = {
   name: "string",
   displayName: "string?",
@@ -354,6 +370,8 @@ const PackagePublishMetadataFields = {
   version: "string",
   changelog: "string",
   expectedArtifactSha256: "string?",
+  requirePrepublicationChecks: "boolean?",
+  curation: CuratedPluginImportSchema.optional(),
   manualOverrideReason: "string?",
   channel: PackageChannelSchema.optional(),
   tags: "string[]?",
@@ -484,6 +502,7 @@ export const ApiV1PackageResponseSchema = type({
     stats: PackageStatsSchema.optional(),
   }).or("null"),
   owner: type({
+    staffCustody: type({ sourceRepo: "string" }).optional(),
     handle: "string|null",
     displayName: "string|null?",
     image: "string|null?",
@@ -520,6 +539,7 @@ export const ApiV1PackageVersionResponseSchema = type({
     verification: PackageVerificationSummarySchema.or("null").optional(),
     artifact: PackageArtifactSummarySchema.or("null").optional(),
     // Deprecated compatibility hash for exact /download ZIP bytes; use artifact.sha256 for installs.
+    curation: CuratedPluginProvenanceSchema.or("null").optional(),
     sha256hash: "string|null?",
     vtAnalysis: PackageVtAnalysisSchema.or("null").optional(),
     skillSpectorAnalysis: PackageSkillSpectorAnalysisSchema.or("null").optional(),

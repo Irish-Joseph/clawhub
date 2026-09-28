@@ -315,6 +315,19 @@ export type PackageMultipartUploadSizeInput = {
 export declare function estimatePackageMultipartUploadBytes(input: PackageMultipartUploadSizeInput): number;
 export declare function isPackageMultipartUploadTooLarge(input: PackageMultipartUploadSizeInput): boolean;
 export declare function getPackageMultipartSizeError(): string;
+export declare const CuratedPluginImportSchema: import("arktype/internal/variants/object.ts").ObjectType<{
+    supersedes?: string[] | undefined;
+    integration: string;
+    job: string;
+    authorship: "company" | "registry";
+    repositoryId: number;
+    ownerId: number;
+    sourceContentHash: string;
+    author?: string | undefined;
+    omittedCapabilities: string[];
+    format: string;
+}, {}>;
+export type CuratedPluginImport = (typeof CuratedPluginImportSchema)[inferred];
 export declare const PackagePublishMetadataSchema: import("arktype/internal/variants/object.ts").ObjectType<{
     name: string;
     displayName?: string | undefined;
@@ -323,6 +336,19 @@ export declare const PackagePublishMetadataSchema: import("arktype/internal/vari
     version: string;
     changelog: string;
     expectedArtifactSha256?: string | undefined;
+    requirePrepublicationChecks?: boolean | undefined;
+    curation?: {
+        supersedes?: string[] | undefined;
+        integration: string;
+        job: string;
+        authorship: "company" | "registry";
+        repositoryId: number;
+        ownerId: number;
+        sourceContentHash: string;
+        author?: string | undefined;
+        omittedCapabilities: string[];
+        format: string;
+    } | undefined;
     manualOverrideReason?: string | undefined;
     channel?: "community" | "official" | "private" | undefined;
     tags?: string[] | undefined;
@@ -352,6 +378,19 @@ export declare const ServerPackagePublishRequestSchema: import("arktype/internal
     version: string;
     changelog: string;
     expectedArtifactSha256?: string | undefined;
+    requirePrepublicationChecks?: boolean | undefined;
+    curation?: {
+        supersedes?: string[] | undefined;
+        integration: string;
+        job: string;
+        authorship: "company" | "registry";
+        repositoryId: number;
+        ownerId: number;
+        sourceContentHash: string;
+        author?: string | undefined;
+        omittedCapabilities: string[];
+        format: string;
+    } | undefined;
     manualOverrideReason?: string | undefined;
     channel?: "community" | "official" | "private" | undefined;
     tags?: string[] | undefined;
@@ -772,6 +811,9 @@ export declare const ApiV1PackageResponseSchema: import("arktype/internal/varian
         } | undefined;
     } | null;
     owner: {
+        staffCustody?: {
+            sourceRepo: string;
+        } | undefined;
         handle: string | null;
         displayName?: string | null | undefined;
         image?: string | null | undefined;
@@ -874,6 +916,19 @@ export declare const ApiV1PackageVersionResponseSchema: import("arktype/internal
             artifactSha256?: string | undefined;
             packageName?: string | undefined;
             version?: string | undefined;
+        } | null | undefined;
+        curation?: {
+            supersedes?: string[] | undefined;
+            integration: string;
+            job: string;
+            authorship: "company" | "registry";
+            repositoryId: number;
+            ownerId: number;
+            sourceContentHash: string;
+            author?: string | undefined;
+            omittedCapabilities: string[];
+            format: string;
+            syncedAt: number;
         } | null | undefined;
         sha256hash?: string | null | undefined;
         vtAnalysis?: {
@@ -1120,6 +1175,9 @@ export declare const ApiV1PluginDetailResponseSchema: import("arktype/internal/v
         } | undefined;
     } | null;
     owner: {
+        staffCustody?: {
+            sourceRepo: string;
+        } | undefined;
         handle: string | null;
         displayName?: string | null | undefined;
         image?: string | null | undefined;
@@ -1213,6 +1271,19 @@ export declare const ApiV1PluginDetailResponseSchema: import("arktype/internal/v
             artifactSha256?: string | undefined;
             packageName?: string | undefined;
             version?: string | undefined;
+        } | null | undefined;
+        curation?: {
+            supersedes?: string[] | undefined;
+            integration: string;
+            job: string;
+            authorship: "company" | "registry";
+            repositoryId: number;
+            ownerId: number;
+            sourceContentHash: string;
+            author?: string | undefined;
+            omittedCapabilities: string[];
+            format: string;
+            syncedAt: number;
         } | null | undefined;
         sha256hash?: string | null | undefined;
         vtAnalysis?: {

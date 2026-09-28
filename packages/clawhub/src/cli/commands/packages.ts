@@ -47,6 +47,7 @@ import {
   MAX_PACKAGE_CLAWPACK_BYTES,
   MAX_PACKAGE_MULTIPART_BYTES,
   normalizeOpenClawExternalPluginCompatibility,
+  type CuratedPluginImport,
   type PackageArtifactSummary,
   type PackageCompatibility,
   type PackageFamily,
@@ -160,6 +161,9 @@ type PackageExploreOptions = {
 type PublishablePackageFamily = "code-plugin" | "bundle-plugin" | "claw";
 
 type PackagePublishOptions = {
+  expectedInventoryDigest?: string;
+  curation?: CuratedPluginImport;
+  requirePrepublicationChecks?: boolean;
   family?: PublishablePackageFamily;
   name?: string;
   displayName?: string;
@@ -283,6 +287,8 @@ type InferredPublishSource = {
 type PackagePublishSource = ReturnType<typeof buildSource>;
 
 type PackagePublishPayload = {
+  curation?: CuratedPluginImport;
+  requirePrepublicationChecks?: boolean;
   name: string;
   displayName: string;
   ownerHandle?: string;
@@ -970,6 +976,16 @@ export async function cmdPublishPackage(
   try {
     plan = await preparePackagePublishPlan(opts, sourceArg, options);
 
+    // Compare the actual upload buffers, after filesystem traversal and ignore
+    // rules, before authentication or uploads. Curated plans require exact bytes.
+    if (
+      options.expectedInventoryDigest &&
+      options.expectedInventoryDigest !==
+        buildGitHubFolderContentHash(hashSkillFiles(plan.filesOnDisk).files)
+    ) {
+      fail("Staged package inventory differs from the reviewed artifact");
+    }
+
     if (options.categories !== undefined && plan.payload.family !== "claw") {
       console.warn(
         "Warning: --categories is deprecated and ignored for plugin publishes, including an empty value. " +
@@ -995,7 +1011,7 @@ export async function cmdPublishPackage(
           files: plan.filesOnDisk,
         });
       }
-      return;
+      return undefined;
     }
 
     if (plan.payload.family === "code-plugin") {
@@ -1171,6 +1187,7 @@ export async function cmdPublishPackage(
         }
         printPackageInspectorFindings(result);
       }
+      return finalResult;
     } catch (error) {
       spinner?.fail(formatError(error));
       throw error;
@@ -2769,6 +2786,8 @@ async function preparePackagePublishPlan(
   const categories = parseCsv(options.categories);
   const topics = parseCsv(options.topics);
   const payload: PackagePublishPayload = {
+    ...(options.curation ? { curation: options.curation } : {}),
+    ...(options.requirePrepublicationChecks ? { requirePrepublicationChecks: true } : {}),
     name,
     displayName,
     ...(ownerHandle ? { ownerHandle } : {}),
