@@ -1,0 +1,934 @@
+{
+  "status": "passed",
+  "mode": "before-after",
+  "scenario": "CLAW-723 Cursor-only crawl and real catalog/download/install proof",
+  "provider": "real local ClawHub + isolated Playwright Chromium",
+  "baseline": "ec1d459396 (prior preview, before local fixture cleanup)",
+  "candidate": "8be2316a1619aaf9fa1057ba7e47ec078483c1ed",
+  "validatedIntegrationCommit": "3fc501fecf (identical tree)",
+  "lanes": [
+    {
+      "name": "baseline",
+      "steps": [
+        {
+          "name": "openai \u2014 desktop",
+          "slug": "openai-desktop",
+          "screenshot": "openai-desktop.png",
+          "status": "passed"
+        },
+        {
+          "name": "openai \u2014 mobile",
+          "slug": "openai-mobile",
+          "screenshot": "openai-mobile.png",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "candidate",
+      "steps": [
+        {
+          "name": "openai \u2014 desktop",
+          "slug": "openai-desktop",
+          "screenshot": "openai-desktop.png",
+          "status": "passed"
+        },
+        {
+          "name": "openai \u2014 mobile",
+          "slug": "openai-mobile",
+          "screenshot": "openai-mobile.png",
+          "status": "passed"
+        },
+        {
+          "name": "cursor \u2014 desktop",
+          "slug": "cursor-desktop",
+          "screenshot": "cursor-desktop.png",
+          "status": "passed"
+        },
+        {
+          "name": "cursor \u2014 mobile",
+          "slug": "cursor-mobile",
+          "screenshot": "cursor-mobile.png",
+          "status": "passed"
+        },
+        {
+          "name": "attio \u2014 desktop",
+          "slug": "attio-desktop",
+          "screenshot": "attio-desktop.png",
+          "status": "passed"
+        },
+        {
+          "name": "attio \u2014 mobile",
+          "slug": "attio-mobile",
+          "screenshot": "attio-mobile.png",
+          "status": "passed"
+        },
+        {
+          "name": "catalog \u2014 desktop",
+          "slug": "catalog-desktop",
+          "screenshot": "catalog-desktop.png",
+          "status": "passed"
+        },
+        {
+          "name": "catalog \u2014 mobile",
+          "slug": "catalog-mobile",
+          "screenshot": "catalog-mobile.png",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "preview": {
+    "base": "http://127.0.0.1:55880",
+    "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db",
+    "crawl": {
+      "scoped": 79,
+      "eligible": 78,
+      "blocked": 1,
+      "unchanged": 78
+    },
+    "catalog": {
+      "before": 2277,
+      "after": 2272,
+      "productionRetained": 2194,
+      "cursor": 78,
+      "openai": 0
+    },
+    "downloads": {
+      "packages": 78,
+      "files": 631,
+      "allFilesMatchOriginalPublishedHashes": true,
+      "allSourceHashesMatchFreshCrawl": true
+    },
+    "withheld": [
+      {
+        "name": "@openai/boltz-api-cli-service-integration",
+        "status": 404
+      },
+      {
+        "name": "@openai/expo-service-integration",
+        "status": 404
+      },
+      {
+        "name": "@openai/mixpanel-headless-service-integration",
+        "status": 404
+      },
+      {
+        "name": "@openai/supabase-service-integration",
+        "status": 404
+      },
+      {
+        "name": "@openai/temporal-service-integration",
+        "status": 404
+      },
+      {
+        "name": "@cursor/salesforce-service-integration",
+        "status": 404
+      }
+    ],
+    "captures": [
+      {
+        "route": "/openai",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "path": "after-openai-desktop.png",
+        "overflow": false
+      },
+      {
+        "route": "/cursor",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "path": "after-cursor-desktop.png",
+        "overflow": false
+      },
+      {
+        "route": "/cursor/plugins/attio-service-integration",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "path": "after-attio-desktop.png",
+        "overflow": false
+      },
+      {
+        "route": "/plugins",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "path": "after-catalog-desktop.png",
+        "overflow": false
+      },
+      {
+        "route": "/openai",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "path": "after-openai-mobile.png",
+        "overflow": false
+      },
+      {
+        "route": "/cursor",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "path": "after-cursor-mobile.png",
+        "overflow": false
+      },
+      {
+        "route": "/cursor/plugins/attio-service-integration",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "path": "after-attio-mobile.png",
+        "overflow": false
+      },
+      {
+        "route": "/plugins",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "path": "after-catalog-mobile.png",
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "scanner": "Local ClawScan/VirusTotal verdicts are simulated; real Plugin Inspector and normal catalog/download/install paths."
+  },
+  "installation": {
+    "runtime": "OpenClaw 2026.9.6",
+    "disposableEnvironment": "cursor-only-proof",
+    "gatewayStarted": false,
+    "thirdPartyAccountConnected": false,
+    "plugins": [
+      {
+        "id": "attio-service-integration",
+        "version": "1.0.0",
+        "status": "loaded",
+        "enabled": true,
+        "format": "bundle",
+        "bundleFormat": "cursor",
+        "bundleCapabilities": [
+          "mcpServers"
+        ],
+        "dependencyStatus": {
+          "hasDependencies": false,
+          "installed": true,
+          "requiredInstalled": true,
+          "optionalInstalled": true,
+          "missing": [],
+          "missingOptional": [],
+          "dependencies": [],
+          "optionalDependencies": []
+        }
+      },
+      {
+        "id": "google-docs-service-integration",
+        "version": "1.1.0",
+        "status": "loaded",
+        "enabled": true,
+        "format": "bundle",
+        "bundleFormat": "cursor",
+        "bundleCapabilities": [
+          "skills",
+          "mcpServers"
+        ],
+        "dependencyStatus": {
+          "hasDependencies": false,
+          "installed": true,
+          "requiredInstalled": true,
+          "optionalInstalled": true,
+          "missing": [],
+          "missingOptional": [],
+          "dependencies": [],
+          "optionalDependencies": []
+        }
+      }
+    ]
+  },
+  "downloadReceipts": [
+    {
+      "name": "@cursor/coda-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "f590ad6fc69c22840c8446cdcb05383095e4533dfea1532ce540946f0beadca5",
+      "sourceContentHash": "1e4ad4f472ba315f0ba3566c1ded17f1e1421e46ba710f686681b6bf2f719c6f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/clay-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "e533037c2cc2057ca6cfd2d3d159c1b80dd5077f1c2c123a4258514ab59a68a8",
+      "sourceContentHash": "9942aaea26f296bb2e469c9829e1b702a2650d0054a3b6bcf894da65a5d72e23",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/ashby-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "6646df9e439578b5a2f495407ac4e9dcaa88725cdea1c91a1a20e01726b199bb",
+      "sourceContentHash": "1b4ef9db991a7a9695d16ad437c89694737a8d512b7907f13c6d461d998e28ca",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/amplemarket-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "08391f29702f4ff1d340835bcc466343289600795b3fa3b5ef6908de8f0ffad8",
+      "sourceContentHash": "7cf4f824da36ca75e0642214e9ef8ec090f6d85a681b43220ce30392268e3265",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/ahrefs-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "cf72d17e7f36942065dea28410b051dd5279c2e2eda3ee92c962be9e49fb2957",
+      "sourceContentHash": "2706068612829cb651e0510be4b1bf26ee241e4e4e768f41635f7f4137966089",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/zoom-meeting-knowledge",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "7b672ab72205454d0d882ca833073aed3afa5d12594cab4798b64778f88df8dc",
+      "sourceContentHash": "fe5b53ce813ae753443549839f5e975ef7a396a03650dc085dfa3e67ff00cb23",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/x-money-service-integration",
+      "version": "1.0.0",
+      "files": 9,
+      "archiveSha256": "951ed080cd74cb8807ecb07111fc181fe66c0dc32c7fbc0d55a256699464569c",
+      "sourceContentHash": "843dab04af53fc51bcd09f6407399c68534adbf073db3064cca7cff051e51e76",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/xero-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "05ace290940cb966302760b861b232e383a536c3f1737958d24b012e704c2bc0",
+      "sourceContentHash": "6a26424a6cc0df85002e6b7bd186b6bbd9f27af70b6c4038f8403ff34d6cb1d2",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/x-ads-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "b910016f04350612f393dd81f8b1f1da85a5a154a28c8d35c7c6dcfbfd401519",
+      "sourceContentHash": "caf61c28ed6fddf7c98758799c82cf93a7f2725ef30546bf5ef4a55b79ac2d14",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/x-service-integration",
+      "version": "2.5.0",
+      "files": 11,
+      "archiveSha256": "f0ea5e89216f0ad60937ee6b37edcdf56161517e8d7b965684e6df29e8e9cc47",
+      "sourceContentHash": "3b4f7e904b17c22ab02445646da786dffff699feb17d656998a245280a00e810",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/wrike-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "e0126ddd0a593023a8c882217565c996dbab589153f2024ce37f7a99097d0779",
+      "sourceContentHash": "25ac2ce7b167d413a2e151f99413645acbab02b32c15aadd9cd6f49c4ab3c8ed",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/webull-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "c8041fb39f6d89274c1780b7cd9d65112cbdb23112a1efda31f04c2f9779b6d6",
+      "sourceContentHash": "8909ec713708e7bdf44950abb8bc3177e56c6ca6d2bf5de6c95b1bc37d90c05f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/workable-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "d80cc759de7a3b47ec69ca183dd3739e76097baac152a3a8434ac2f8d651c101",
+      "sourceContentHash": "765fe8ac26bd625808a37a18e8c844254f1fbb91f7fe623c52c9a18de5c1e054",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/upwork-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "79e27c3f2ce489133677c0fdcc0df95972d05dd1c0d422974fc60484968150a1",
+      "sourceContentHash": "1b8b9dfe21f821e81873149fca16cbe5672cd3a5d50ef307be01a541118bce7d",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/typeform-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "83d2fb0b5010ecc9a779db8f1bb8acb0ea03e30eb557e15dc6bdea1d64f8c58a",
+      "sourceContentHash": "009b532deaebbc1f8e88ce75a7e31d04c27a3fd54920bc4ce41d1e9ad4db3236",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/trello-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "82b58861b427e915b7aef63be2136b3f64e217faf25af88f44e888ef1f1c01e5",
+      "sourceContentHash": "b36b6d93bf8e9702379521c8aca905dbfe03611cb97809adcb8c6b66f3ba5291",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/todoist-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "3156a561e7ea3c702e5b2867c6b5a365f1d4acb9b76f683fe1f5cccb5126356e",
+      "sourceContentHash": "1cd9ac58696903cb1b6e58b86bba95fde2cadcfb2d93a2dccf984617cfa40cb3",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/tinyfish-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "04467898138e4c7cef271ff3fc1c1001dcc053a7661fd82b965473275a133064",
+      "sourceContentHash": "df635e0ca2198e85c077ab087aa13fd117b2d27da61f41af8fb596ec66106f2c",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/teams-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "6d5f0aa827c01e2bf3d394a9d446bf449883dabb86d711d164cc14e6a1456710",
+      "sourceContentHash": "6d05aced122bfbad6de60ef8de5373bf7f04356995058a202eb25afeead90766",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/statsig-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "afc7f9fa36ae429e1bdae3a347282350d62e026fb3237942628f116fa402a22f",
+      "sourceContentHash": "9c9906b4b41e3654b6f3570736a0969e14ffdf60d88f94a4e1b640de2973548d",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/sp-global-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "d2873d25a7ff6879c10dd8bc5bda627ea2ad2a06b8c7bdf7aa0fc8957e28bcbf",
+      "sourceContentHash": "788a094b70f95308d63ee3aa9f6010fee6e8c881c54e508b86fb0d027853124a",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/smartsheet-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "be32795f16fd25deb21ea5a8720dbd4417e26cb82641e86a7c8954d6493cc35d",
+      "sourceContentHash": "b8253fcf1dcc108532583d66f856d98d31979072cbd69a9f7fb4ff03d5e58bfe",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/similarweb-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "efd6a780e9255ed81a8e230ab073a799af0aac4acc3c2cf04391c9834c9b6260",
+      "sourceContentHash": "6f7fe3367da47b03e015b07068e3fea26766c127e70a296d53fb2286ea229ff0",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/shopify-commerce",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "c4ac603998bcb24ecffa0bdcc720b8bbac11aa125195d582ecf67328bd714f21",
+      "sourceContentHash": "c490be98efb124be4f381105fee0e8ea2d4e6717da86856e101379b7ed5b1695",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/sharepoint-documents",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "feb44e1d88585ff7647dc89267d5983810cb3745b24d42698cd282cd2f05c24c",
+      "sourceContentHash": "a34d2a85af080db56a3686cf03a40e42b12ec1c3cfa2dc3fbb80bde31a0d0de8",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/semrush-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "8ecb34218501273d852aa1f29317588509d65a74ae277fc9b0bb68dc3d8caf08",
+      "sourceContentHash": "8483b618ae0218b86003d04a9c1947180775e1315de61c684d40f335d2eb8725",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/robinhood-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "73c247276d84e1f2bccad81425bb951d34de0b172ad8df08079d9def95f9ccc2",
+      "sourceContentHash": "7af62863202ffcd1771e975a94ed652b9f1a6069da00c3022db2d0668336a607",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/readwise-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "2f7f57b9feb3017e6bba85db187c4dcc26351add171a3fa78811df44cddeb13b",
+      "sourceContentHash": "017d2f3c521720138c2945ad080f067326ff595222bae4605e9baee02498eaa9",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/profound-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "4bc1bf35f25b3e1af2f7d0b1417f5f7cd60ed1a9a8bc27ed4b30e5e648928069",
+      "sourceContentHash": "25afe4470719d06525d26ac85a916767fdf8cf16fa33d32669896b09476d1d6b",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/posthog-product-analytics",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "345f0607e9a74c43c4f9545cb6dc99bb8320bfe7d1e4e70d28c81f4b9f5f8a0c",
+      "sourceContentHash": "2196460d0b48591de9b9ad6671d13e71e082f75171ebc99d6fa0fead139fd75f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/playwright-browser-automation",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "02fc1e4d7556a79cbf2d7bb0068b6c52902aaeb047396402c036d96657ff4ca8",
+      "sourceContentHash": "1d1061b5f571e30bbd1dd17c0227d985b5e39562bd903b5db9940c4004ae6dfc",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/plaud-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "b1a6b351e857c430d69948abbc7a3c6416346badea700e2bdaa533c49b5ac084",
+      "sourceContentHash": "65dffeaa407f827bc64bb64bc57246cc97b5947134b4da82feb963fef30f653b",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/outreach-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "ef25b0407460ea010b212707cac1bd88ba3401e200fc56e830e52aee84327e97",
+      "sourceContentHash": "e1b5daf1297c32f5c78a99bd570265fd8ed5b5a127e1f0d0046840a6c5f61256",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/outlook-calendar-calendar",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "db9f1dfb5d39436641e7f377d30052407739198818278faa28ba0f4e1bec6018",
+      "sourceContentHash": "88bb4d8819026083aa0fc722914d754db662df7e0304509cf86ce1753183771e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/outlook-email",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "70b37108209d9aeab0f40f5daad83e2f585dcd50e53d708331ca9a595f3f8caf",
+      "sourceContentHash": "c999b9e36bb015d61bfaf5f521fcc77cb075d890360ed01b72fb0b57f66cae72",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/otter-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "1cda4ec2ca9f08f6e61f35350bd17fcf44091fc266f9383b24f4dff917316917",
+      "sourceContentHash": "9e34cd593c1bc5498bbd7977249bea030bceab73b093b39e1ed5e5781908f7df",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/onedrive-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "e6853bc0f46bf3690cf0be41794e83559b332c2853f5201ee39d946e893ac6ad",
+      "sourceContentHash": "81d026c4a402b59c6a8c8509a3b148f77a4f7f2c97b4512ff03abda0d831a532",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/navan-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "2a92089bd93ef904552f57b0d63dd4a17d58397def43b4440300eb39d0172e03",
+      "sourceContentHash": "3c225a69494611d7f49067df4a7777409389990a4e53d98b2ddf84f6f3076a3f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/mercury-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "0f444065e76afdfff5548e145b3f5804ac7ed605208b3aa1f1149ce602bb6d2b",
+      "sourceContentHash": "0bbcaa97c407423e6c3907187fd9d6387f3f07f74a59c612b03e16104ace63dd",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/mem-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "858e674b2baef282edee2c695da74baa47457ec0920e27efa0f058fe71d458d4",
+      "sourceContentHash": "e242b6dc0c989621a03476416dfdbf8655fc81e6f012730c278ce7630e5b0b8f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/meltwater-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "442d78a71253ae85f05c6f87dab365f20d5b11ee61d0087d6bdc78a259a7148b",
+      "sourceContentHash": "20002e27233a3a774904ddd2bbbd51a446d376fc5499a711fc2756fc7a742904",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/mailerlite-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "032c25d649655e4fb2cd1e314754a6909e013e7b25df9133e99c443ee53f1027",
+      "sourceContentHash": "f5d580694b872cfb90bbcc30577bfc1f921d45c4a24b2c5f46d711dd960eb91a",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/klaviyo-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "a6bb4fe25bc31ef38287f1c579d4b26e541b365c33ae3dda28b0dc7dae67b8d1",
+      "sourceContentHash": "cfbf30f1d36cc4ae7e8825f46193e968c32b413feeb647bb25bf82e0de950733",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/jotform-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "160e525d701f41c7e37d7af65cf9d196dd01e69fd90e25f93dd69ae0f6dbcd28",
+      "sourceContentHash": "26be44237c59b561752de3b887c698bbde67f1080a30fd1a509865b8bcb20c01",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/juicebox-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "b7effeb089337e9d948af84439d1e753031303d4109924615dc4c8f9e6d1a572",
+      "sourceContentHash": "561f9e2297b382720534d2dc620e11ba587d827ed822fbe15b94e94cf0ee2872",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/intercom-customer-support",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "9f5bcf63c32be841e4338a9a2ef19d26d285e7f26993bc5045aad1272fe8dd67",
+      "sourceContentHash": "c91b246cc051ca5f80450aef82024cd211c28645c9dbf28fa8a8ff6061140ed6",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/interactive-brokers-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "8e5bf3dd7a82e7d25c10d6be60dd541e27def23a939f278d25459a94d898e96d",
+      "sourceContentHash": "a087012258ed5c6021e27d9024e81b0e7a0007e95fedfbefece39e4176e47a5a",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/hunter-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "01d5059223196c87e2aedb7abb46c2f00a16e2f6404909b3538f137976e885ea",
+      "sourceContentHash": "830290b892f2e54e12649782dcbb39fc625695f645273a7c0bcee0b8ccd9483e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/hubspot-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "fafad6595c3f60f4cb4f91c22db59e3f6087e609f60302941450e26b4e698426",
+      "sourceContentHash": "b255d60e37a52bd5ee3dd29f2427241485046e00b1ce07657032e4dfa10cf7ad",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/guru-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "7ed370dc7eb5c4339f5e4e83040b8e521b6e56df0e45d064084262e4e3682f98",
+      "sourceContentHash": "4f1e8a93c6bf6f6b5f7114373e4b18bf215ef92227cb532ce11fe0f0ea595a3c",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-slides-service-integration",
+      "version": "1.1.0",
+      "files": 9,
+      "archiveSha256": "a776253cd15357a9ddfa4173d12a1e35f3242a44c5ecbee3bb6c4136d0cbb8fc",
+      "sourceContentHash": "3c75f941cea8760d754b86ff1bbeed4b3acaf9f1094cb9d623b0a83ce953b7f2",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-sheets-service-integration",
+      "version": "1.1.0",
+      "files": 9,
+      "archiveSha256": "21ccc71a0b28b9152249d378dbdb86a70291023bb0360529e0e42d5c570e740e",
+      "sourceContentHash": "f8f993a0334ee8b63b217ee1126cf0b8fce25b21aa9869dbce7c0af89420f909",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-drive-documents",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "b92ac99a2fb94710fdc911d1a4f7775e8e34ca6e97f3e77a1883294ed050367c",
+      "sourceContentHash": "5df04c5f5e3f7f004f62d3424b5b266484046cc050ba27a4d577158f534916a2",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-docs-service-integration",
+      "version": "1.1.0",
+      "files": 9,
+      "archiveSha256": "4660b7ad5dececa6202a6a309ce409eb1f12c0af602cca76453fdc31b15cece8",
+      "sourceContentHash": "9615361026e6458a3ffacd064a8a5473126be010e753c864165dec22880bd956",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-calendar-calendar",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "72db02f42a818404ec6a1b47f6a312236a0613959eb560ae97695a3fef5453d9",
+      "sourceContentHash": "5a56cbdd99035fb160e3c53dd27d6829bac5bf6dc2221c89b5d56de6cf64b328",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/google-cloud-bigquery-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "71feb3b6c2e69b87662ca6c27ee49c2c68053f557f4be365eec4a9d2f9d45319",
+      "sourceContentHash": "92235cdbf262284915b9d1cd90f47faa69bef0f86cf66d4d1bb74a290dd6d72b",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/gong-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "1e805a36d0c89b2fb629fae49876ed99ef31b05b534b58bf2e2d7e77870f6473",
+      "sourceContentHash": "24232180986ee4986e3fc5a9730e105f4552e41fcc074f3bca4bc7dcb8f3d411",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/godaddy-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "244923cd1685fd1a3c07a3e86e1916327a83920e8af37d2c79da59db9ae80c09",
+      "sourceContentHash": "7e8f32804abeb439588a6a14f4c6fe7bf018aa34067d5e4662486bde519b2095",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/gmail-email",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "ccdd65b2a1bbd305c85d365f2404daf2c3841ed0f6423390172f12bb0247dd48",
+      "sourceContentHash": "72377daebfa0837e4de06b79ba572a94ed26b9f38c0ef931631b62e0295b8035",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/github-repository-management",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "7a08384e11c65290e01ba96a7e890e520a419be39f76054b886c9e595663fd52",
+      "sourceContentHash": "85a7a699d6a3de394ff6143e0dc1bd189c20454358be25de58292ebe2bb2c81c",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/gamma-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "af0ce50acdbcf68512a0a1406fa1c208485741261960c4b2de4f37270a67a547",
+      "sourceContentHash": "f8b5151454c46655da8ff7ac5916852651cecec0d909a3c518f6ff9184f76c7c",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/fireflies-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "72d105f95ddb6db902415f7fccaeaee9da0271f5fd0225abf8930953f4515966",
+      "sourceContentHash": "2fc6bcbeb665e328807fe87eb32c16302dcbfaa210aacf9e311f74dfb48518c6",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/plaid-service-integration",
+      "version": "1.1.2",
+      "files": 8,
+      "archiveSha256": "c1dfe13ad4bf7b5352605ce50ae3938c9b6e5f5279314acd46e1d46fe3055fc5",
+      "sourceContentHash": "77562d1dad59dd0cffcdba15354178b150eba800c59337e135ea521b918d5f1e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/excalidraw-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "d03020f8614959440a44c50ab68ca9a3b0acff0d475e41c12b1158e063abeb46",
+      "sourceContentHash": "41b4b65bcc1fb0be51a2e651bfac6814df89ea0b0cb587f2527005608829ee2e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/fathom-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "5fd9093a76c6d5e65c18091e2a5adc588dc902a69d6cd190facd2aae4e37056a",
+      "sourceContentHash": "3a4cda7a162af334407b84307dc88254d34b118bfac3b4b36f1ab2255bffe363",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/etoro-trading-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "ab74d2047b15dce1b017080cfc0e8111db8cacd9babdca218c7d1fdfdd44c493",
+      "sourceContentHash": "4c0797ddf9966122a865037ac56f13f153a24f7179f40922181181d08d834822",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/docusign-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "aaefcc4d541c6e537ca09e9a3f5b3b0caf17584f896caf0f34e4fd0169f10460",
+      "sourceContentHash": "10f0eb3454bbb3b4bf0027713a80af700bfe092f6fcfa258aa4a407fa456aa5d",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/customer-io-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "415462f60c6555fba6a9b5d4cf28b44dfc1c5e520404a49276a5c9de820bffdc",
+      "sourceContentHash": "2d435dd2d0745d720f9db520fbc989ded33611f20f308f2357746de89fe7c425",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/daloopa-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "1a7a1e707cfb37730f4f49c90ab94d08940ad3ad15e3d4011d3c1ab2e57edb71",
+      "sourceContentHash": "efdcc6d92a2f5615c156dedc9a3557e119d40f040f18dc1d9049fc5046e7671b",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/craft-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "9a29c4066736f0b1259acdc94af37f6070f10397e9f3bbd0950efca9b3cc2732",
+      "sourceContentHash": "1f8e59cef0c5138ecb099b54dd9bd34d49c030dc67c2e128a766fa0e35b4f08e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/coinbase-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "641a87b31f74edaeb5675ff64732cabef416960c306ba1e8714a2462c6aa87b5",
+      "sourceContentHash": "2ada954c27c32facc703366c2b78e53cc585328b0581b1236386e78cb1bdc81f",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/circleback-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "b831232f1ad4fa4618172cab9b5dfa2d38e2808025a1cb6442243dcde146348b",
+      "sourceContentHash": "46bebdd2c5e3ed146fcc240ea4c1f31da6260dcde9bebef030610307abac1ff4",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/calendly-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "89f40614435c1a4006f1d25bbf53a2bea36b3fa48bd6adadbd934f8fdfa587a9",
+      "sourceContentHash": "c4724713bf3184d2d0d7c336e99ca706fffb2337e280ad9f6a691118894985d2",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/buffer-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "76d7559d71e017a279d17af52c1ab0ccec501a0e89d07e635619d17a48d76289",
+      "sourceContentHash": "e7dd2d08efc1cd3a5f590f971bd80d9d4ecada4a38fd353cc7ab6fa9b590373e",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/brex-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "b83a2fa11e2f0f1139a40519bd8492558c72eab2c42b9d8e6358248e85f4f464",
+      "sourceContentHash": "3c80bcc278a5b60d9688ead2021dadbef709e399c6402395664461f65db9c2f4",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/brevo-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "dbe24ccabfa39c52d7a315a1f08925618885139f5e8601030ff63e6dfbe2c020",
+      "sourceContentHash": "3c6c7314fe8b24038bb667c0ce143e153aa70f4295959b2b9bd6626e46b867ab",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/beehiiv-service-integration",
+      "version": "1.0.1",
+      "files": 8,
+      "archiveSha256": "5d558e746987ef3a0c41d1c000af229f8ea2fa397a1b0ad15e896cfd01e81b15",
+      "sourceContentHash": "dc4de8fa44676b219c713f0abf8fd04cd95f658501ac7129f9f36b96642b8607",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    },
+    {
+      "name": "@cursor/attio-service-integration",
+      "version": "1.0.0",
+      "files": 8,
+      "archiveSha256": "ba042f282792f932d1106347c18316fb9824400cb584915869e517855cccffbd",
+      "sourceContentHash": "c1229c52b42513c5957c6e8fb285224fe77ced27b62c0d8013574f5af162a240",
+      "sourceCommit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db"
+    }
+  ],
+  "commits": [
+    {
+      "layer": 1,
+      "branch": "codex/claw-723-cursor-stack-01",
+      "head": "499e722bb979276b1f7bd55ed38961b7b5709ded",
+      "subject": "feat: inventory Cursor third-party company integrations"
+    },
+    {
+      "layer": 2,
+      "branch": "codex/claw-723-cursor-stack-02",
+      "head": "db7c3ae6e72c331cbbf617d03dd7b95942f91267",
+      "subject": "feat: publish reviewed Cursor bundles with provenance and security gates"
+    },
+    {
+      "layer": 3,
+      "branch": "codex/claw-723-cursor-stack-03",
+      "head": "2c4cbe137678b2fdd1a78f5b7c81e38aa328d280",
+      "subject": "feat: preserve imported plugin attribution and ownership history"
+    },
+    {
+      "layer": 4,
+      "branch": "codex/claw-723-cursor-stack-04",
+      "head": "b8fafefb6504e553556cfe8c321b484b20c17f8f",
+      "subject": "feat: synchronize Cursor plugins as immutable scanned releases"
+    },
+    {
+      "layer": 5,
+      "branch": "codex/claw-723-cursor-stack-05",
+      "head": "1e60d6c01337afaa8b360fa118b58baddc184351",
+      "subject": "feat: curate the Cursor company integration catalog"
+    },
+    {
+      "layer": 6,
+      "branch": "codex/claw-723-cursor-stack-06",
+      "head": "10a17c9e00bb47121012ee4b602184c3b97c3c88",
+      "subject": "test: prove Cursor-only catalog and synchronization boundaries"
+    },
+    {
+      "layer": 7,
+      "branch": "codex/claw-723-cursor-stack-07",
+      "head": "18136ec86c4930a53bd54ef6cab6b07396f51071",
+      "subject": "fix: refresh Cursor-only local crawl fixtures safely"
+    },
+    {
+      "layer": 8,
+      "branch": "codex/claw-723-cursor-stack-08",
+      "head": "8be2316a1619aaf9fa1057ba7e47ec078483c1ed",
+      "subject": "fix: preserve empty plugin filenames in CLI uploads"
+    }
+  ],
+  "security": "ClawScan/VirusTotal verdicts are simulated local fixtures. Plugin Inspector, immutable archive verification, catalog/download and OpenClaw installation are real. No third-party product login or production publication."
+}
