@@ -11,6 +11,8 @@ There is no marketplace scraper, synchronization job, source ranking, or automat
 | [GoDaddy Domains](godaddy/) | GoDaddy domain suggestions and availability | None           | Infrastructure | OpenClaw discovery and a read-only availability call |
 | [Excalidraw](excalidraw/)   | Excalidraw public diagram MCP               | None           | Media          | OpenClaw discovery and the read-only `read_me` tool  |
 
+The `.cursor-plugin/plugin.json` marker selects the bundle loader. The accompanying `openclaw.plugin.json` supplies ClawHub identity and categories. There is no `package.json` native runtime entrypoint: on OpenClaw 2026.9.6 the Cursor bundle marker takes precedence over native-manifest fallback, so `.mcp.json` remains active. Installation alone is insufficient proof; verify the installed bundle tools without separately configured MCP server overrides.
+
 These are service connection adapters maintained by OpenClaw, not packages authored by GoDaddy or Excalidraw. Their MIT licenses cover adapter files only. The hosted services and their data remain subject to provider terms.
 
 ## Review and release
