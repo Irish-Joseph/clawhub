@@ -698,7 +698,11 @@ describe("built CLI artifact", () => {
           },
         },
       );
-      expect(received.filter((file) => file.size === 0)).toEqual([
+      // Directory traversal order differs between Node/Bun and host filesystems.
+      const emptyFiles = received
+        .filter((file) => file.size === 0)
+        .sort((left, right) => left.name.localeCompare(right.name));
+      expect(emptyFiles).toEqual([
         { name: "assets/.gitkeep", size: 0 },
         { name: "assets/second-empty.txt", size: 0 },
       ]);
