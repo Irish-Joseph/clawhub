@@ -286,3 +286,13 @@ Error UX:
 - Skill file references `docs/usage.md` + images; smart-select picks `.md` and referenced text files; ignores external links.
 - Huge repo → clean “too large” error.
 - Redirect pinning → import stores commit sha in provenance.
+
+## Curated Cursor company plugin synchronization
+
+Staff-curated bundle imports use the reviewed source manifest in `scripts/company-plugins/` and the existing package publisher. Active discovery, import and synchronization are limited to `cursor/plugins/third_party/` company/product integrations, including Cursor-authored wrappers. External repository pointers, Cursor internal plugins, Anthropic, OpenAI, Hermes and additional company repositories are excluded. Both the source contract and backend curated publication boundary reject out-of-scope sources. This admin-only path does not broaden the signed-in dashboard's owned-repository restriction.
+
+Canonical identity is `(integration, primary job)`. Explicitly mapped existing ClawHub packages or bundled OpenClaw integrations suppress equivalent imports. Exact Cursor repository/path duplicates collapse. Multiple eligible Cursor paths for the same job require one reviewed curator preference; an ambiguous group is withheld. There is no cross-registry ordering or automatic represented-company replacement.
+
+Every changed source closure must retain complete MIT licensing and notices, resolve to an exact commit, pass supported bundle extraction, and submit the final normalized bytes to normal prepublication checks. Initial publication requires a reviewed artifact digest; automatic updates require a reviewed source identity and initial source hash. Same source bytes are idempotent; changed bytes get a new immutable version. Missing or invalid upstream content leaves the last safe release available and appears in the operator report. Current package-owned categories remain authoritative and metadata refreshes do not rewrite archives.
+
+Pending and blocked releases are inaccessible through both exact download and file routes, including updates to an already public package. Historical provenance, custody and canonical aliases remain readable without making their sources eligible for new curated publications. Existing version URLs continue to identify their immutable artifacts.
