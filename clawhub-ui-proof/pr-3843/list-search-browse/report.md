@@ -1,6 +1,6 @@
 # List-only catalogs with persistent search
 
-Skills and Plugins now have an always-visible, full-width search field immediately under the title. Card/grid rendering and its toggle are removed, including for old `view=grid` and `view=cards` links. Search clearing never collapses the field. `/` focuses it; Escape clears it while preserving focus. Category navigation and topic filters remain available.
+Skills and Plugins now have an always-visible, full-width search field immediately under the title. Card/grid rendering and its toggle are removed, including for old `view=grid` and `view=cards` links. The visible slash key badge is removed, and search has 12px vertical padding with a stable 56px minimum height. Search clearing never collapses the field. `/` focuses it; Escape clears it while preserving focus. Category navigation and topic filters remain available.
 
 ## Comparable real browser proof
 
@@ -18,7 +18,7 @@ The baseline and candidate use identical URLs and local fixtures:
 | Skills | 390×844 | [Before](baseline/skills-mobile.png) | [After](candidate/skills-mobile.png) |
 | Plugins | 390×844 | [Before](baseline/plugins-mobile.png) | [After](candidate/plugins-mobile.png) |
 
-The desktop Skills title-to-results distance decreases from 90px to 73px; search fills the former empty toolbar row. On mobile, the expanded search and category picker occupy separate full-width rows. The search field matches its catalog container width at mobile (390×844), tablet (768×1024), laptop (1366×768), and desktop (1440×1000), without horizontal overflow or page exceptions.
+The desktop Skills title-to-results distance decreases from 90px to 84px; search fills the former empty toolbar row. On mobile, the expanded search and category picker occupy separate full-width rows. The search field matches its catalog container width at mobile (390×844), tablet (768×1024), laptop (1366×768), and desktop (1440×1000), without horizontal overflow or page exceptions.
 
 ## Additional coverage
 
@@ -32,9 +32,9 @@ Capture commands: `node .artifacts/list-search-browse/capture.mjs candidate`, `n
 
 ## Validation
 
-- Focused browse routes: 140 tests passed. Search-attribution clear/retype regression also passed after updating its expected control label and removing the obsolete open-search click.
+- Focused browse routes: 163 tests passed. Search-attribution clear/retype regression also passed after updating its expected control label and removing the obsolete open-search click.
 - Production build and app/schema/CLI/admin types: passed (`bun run ci:types-build`).
 - Formatting, lint, dead-code, llms, peer, and release-workflow pin checks: passed.
-- Autoreview: clean (`.agents/skills/autoreview/scripts/autoreview --mode local --stream-engine-output`); no findings. Subsequent edits only made a hook's early return explicit for lint and adapted the search-attribution test to persistent search.
-- `bun run ci:static` stops at pre-existing lockfile advisories: fast-uri 3.1.6 (two high) and undici 7.29.0 (one moderate). All remaining static checks ran separately and passed. No dependency files changed.
+- Autoreview: clean (`.agents/skills/autoreview/scripts/autoreview --mode local --stream-engine-output`); no findings. The final search polish and dependency patch updates also passed autoreview with no findings.
+- `bun run ci:static`: passed. Patch updates to fast-uri 3.1.7 and undici 7.29.1 clear the previous dependency advisories.
 - `bun run ci:unit`: passed, 7,241 tests passed and 3 skipped; coverage passed.

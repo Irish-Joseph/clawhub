@@ -4,7 +4,7 @@
   "scenario": "list-search-browse",
   "provider": "local-chromium",
   "baseline": "c68cccc69f",
-  "candidate": "b8678447b5ef0fee7752e820d643687142dc5b92",
+  "candidate": "74a03f163b7e4a683e5296665cc304fc8aa7f72a",
   "lanes": [
     {
       "name": "baseline",
@@ -119,7 +119,7 @@
       "viewport": "desktop",
       "url": "http://127.0.0.1:3049/plugins?featured=true&category=computer-use",
       "metrics": {
-        "gap": 117,
+        "gap": 128,
         "searchWidth": 1200,
         "controlsWidth": 1200,
         "overflow": false
@@ -131,7 +131,7 @@
       "viewport": "desktop",
       "url": "http://127.0.0.1:3049/skills?tab=new",
       "metrics": {
-        "gap": 73,
+        "gap": 84,
         "searchWidth": 1200,
         "controlsWidth": 1200,
         "overflow": false
@@ -143,7 +143,7 @@
       "viewport": "mobile",
       "url": "http://127.0.0.1:3049/plugins?featured=true&category=computer-use",
       "metrics": {
-        "gap": 171,
+        "gap": 182,
         "searchWidth": 358,
         "controlsWidth": 358,
         "overflow": false
@@ -155,7 +155,7 @@
       "viewport": "mobile",
       "url": "http://127.0.0.1:3049/skills?tab=new",
       "metrics": {
-        "gap": 127,
+        "gap": 138,
         "searchWidth": 358,
         "controlsWidth": 358,
         "overflow": false
@@ -167,7 +167,7 @@
       "viewport": "tablet",
       "url": "http://127.0.0.1:3049/plugins?featured=true&category=computer-use",
       "metrics": {
-        "gap": 165,
+        "gap": 176,
         "searchWidth": 672,
         "controlsWidth": 672,
         "overflow": false
@@ -179,7 +179,7 @@
       "viewport": "tablet",
       "url": "http://127.0.0.1:3049/skills?tab=new",
       "metrics": {
-        "gap": 121,
+        "gap": 132,
         "searchWidth": 672,
         "controlsWidth": 672,
         "overflow": false
@@ -191,7 +191,7 @@
       "viewport": "laptop",
       "url": "http://127.0.0.1:3049/plugins?featured=true&category=computer-use",
       "metrics": {
-        "gap": 117,
+        "gap": 128,
         "searchWidth": 1200,
         "controlsWidth": 1200,
         "overflow": false
@@ -203,7 +203,7 @@
       "viewport": "laptop",
       "url": "http://127.0.0.1:3049/skills?tab=new",
       "metrics": {
-        "gap": 73,
+        "gap": 84,
         "searchWidth": 1200,
         "controlsWidth": 1200,
         "overflow": false
