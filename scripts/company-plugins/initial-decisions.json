@@ -1,0 +1,737 @@
+{
+  "scope": "Cursor third_party company/product integrations only",
+  "approval": "No sources approved for production; local preview acceptance only",
+  "crawl": {
+    "fetchedAt": "2026-09-28T00:37:14.633Z",
+    "repo": "cursor/plugins",
+    "commit": "ecc249f1e306fc64ddf83c7bed16cacf7c2239db",
+    "scoped": 79,
+    "statuses": {
+      "selected": 78,
+      "blocked": 1
+    },
+    "prepared": 78,
+    "blocked": [
+      {
+        "name": "salesforce",
+        "reasons": ["Invalid or empty mcpServers capability", "No runnable OpenClaw capability"]
+      }
+    ],
+    "productionCatalogRows": 2194,
+    "digest": "d5df7491b0c7674670b55a9a3856ec91819ea1c279c521041c737492105aa9cf"
+  },
+  "deduplication": "Existing mapped ClawHub/OpenClaw equivalents; exact Cursor paths; explicit preference for ambiguous same-job candidates",
+  "decisions": [
+    {
+      "integration": "ahrefs",
+      "job": "service-integration",
+      "path": "third_party/ahrefs",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "2706068612829cb651e0510be4b1bf26ee241e4e4e768f41635f7f4137966089",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "amplemarket",
+      "job": "service-integration",
+      "path": "third_party/amplemarket",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "7cf4f824da36ca75e0642214e9ef8ec090f6d85a681b43220ce30392268e3265",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "ashby",
+      "job": "service-integration",
+      "path": "third_party/ashby",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "1b4ef9db991a7a9695d16ad437c89694737a8d512b7907f13c6d461d998e28ca",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "attio",
+      "job": "service-integration",
+      "path": "third_party/attio",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "c1229c52b42513c5957c6e8fb285224fe77ced27b62c0d8013574f5af162a240",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "beehiiv",
+      "job": "service-integration",
+      "path": "third_party/beehiiv",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "dc4de8fa44676b219c713f0abf8fd04cd95f658501ac7129f9f36b96642b8607",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "brevo",
+      "job": "service-integration",
+      "path": "third_party/brevo",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "3c6c7314fe8b24038bb667c0ce143e153aa70f4295959b2b9bd6626e46b867ab",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "brex",
+      "job": "service-integration",
+      "path": "third_party/brex",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "3c80bcc278a5b60d9688ead2021dadbef709e399c6402395664461f65db9c2f4",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "buffer",
+      "job": "service-integration",
+      "path": "third_party/buffer",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "e7dd2d08efc1cd3a5f590f971bd80d9d4ecada4a38fd353cc7ab6fa9b590373e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "calendly",
+      "job": "service-integration",
+      "path": "third_party/calendly",
+      "status": "selected",
+      "categories": ["scheduling"],
+      "sourceContentHash": "c4724713bf3184d2d0d7c336e99ca706fffb2337e280ad9f6a691118894985d2",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "circleback",
+      "job": "service-integration",
+      "path": "third_party/circleback",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "46bebdd2c5e3ed146fcc240ea4c1f31da6260dcde9bebef030610307abac1ff4",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "clay",
+      "job": "service-integration",
+      "path": "third_party/clay",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "9942aaea26f296bb2e469c9829e1b702a2650d0054a3b6bcf894da65a5d72e23",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "coda",
+      "job": "service-integration",
+      "path": "third_party/coda",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "1e4ad4f472ba315f0ba3566c1ded17f1e1421e46ba710f686681b6bf2f719c6f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "coinbase",
+      "job": "service-integration",
+      "path": "third_party/coinbase",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "2ada954c27c32facc703366c2b78e53cc585328b0581b1236386e78cb1bdc81f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "craft",
+      "job": "service-integration",
+      "path": "third_party/craft",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "1f8e59cef0c5138ecb099b54dd9bd34d49c030dc67c2e128a766fa0e35b4f08e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "customer-io",
+      "job": "service-integration",
+      "path": "third_party/customer-io",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "2d435dd2d0745d720f9db520fbc989ded33611f20f308f2357746de89fe7c425",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "daloopa",
+      "job": "service-integration",
+      "path": "third_party/daloopa",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "efdcc6d92a2f5615c156dedc9a3557e119d40f040f18dc1d9049fc5046e7671b",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "docusign",
+      "job": "service-integration",
+      "path": "third_party/docusign",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "10f0eb3454bbb3b4bf0027713a80af700bfe092f6fcfa258aa4a407fa456aa5d",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "etoro-trading",
+      "job": "service-integration",
+      "path": "third_party/etoro-trading",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "4c0797ddf9966122a865037ac56f13f153a24f7179f40922181181d08d834822",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "excalidraw",
+      "job": "service-integration",
+      "path": "third_party/excalidraw",
+      "status": "selected",
+      "categories": ["media"],
+      "sourceContentHash": "41b4b65bcc1fb0be51a2e651bfac6814df89ea0b0cb587f2527005608829ee2e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "fathom",
+      "job": "service-integration",
+      "path": "third_party/fathom",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "3a4cda7a162af334407b84307dc88254d34b118bfac3b4b36f1ab2255bffe363",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "plaid",
+      "job": "service-integration",
+      "path": "third_party/finance",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "77562d1dad59dd0cffcdba15354178b150eba800c59337e135ea521b918d5f1e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "fireflies",
+      "job": "service-integration",
+      "path": "third_party/fireflies",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "2fc6bcbeb665e328807fe87eb32c16302dcbfaa210aacf9e311f74dfb48518c6",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "gamma",
+      "job": "service-integration",
+      "path": "third_party/gamma",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "f8b5151454c46655da8ff7ac5916852651cecec0d909a3c518f6ff9184f76c7c",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "github",
+      "job": "repository-management",
+      "path": "third_party/github",
+      "status": "selected",
+      "categories": ["developer-tools"],
+      "sourceContentHash": "85a7a699d6a3de394ff6143e0dc1bd189c20454358be25de58292ebe2bb2c81c",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "gmail",
+      "job": "email",
+      "path": "third_party/gmail",
+      "status": "selected",
+      "categories": ["inbox-collaboration"],
+      "sourceContentHash": "72377daebfa0837e4de06b79ba572a94ed26b9f38c0ef931631b62e0295b8035",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "godaddy",
+      "job": "service-integration",
+      "path": "third_party/godaddy",
+      "status": "selected",
+      "categories": ["infrastructure"],
+      "sourceContentHash": "7e8f32804abeb439588a6a14f4c6fe7bf018aa34067d5e4662486bde519b2095",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "gong",
+      "job": "service-integration",
+      "path": "third_party/gong",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "24232180986ee4986e3fc5a9730e105f4552e41fcc074f3bca4bc7dcb8f3d411",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-calendar",
+      "job": "calendar",
+      "path": "third_party/google-calendar",
+      "status": "selected",
+      "categories": ["scheduling"],
+      "sourceContentHash": "5a56cbdd99035fb160e3c53dd27d6829bac5bf6dc2221c89b5d56de6cf64b328",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-cloud-bigquery",
+      "job": "service-integration",
+      "path": "third_party/google-cloud-bigquery",
+      "status": "selected",
+      "categories": ["data-analytics"],
+      "sourceContentHash": "92235cdbf262284915b9d1cd90f47faa69bef0f86cf66d4d1bb74a290dd6d72b",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-docs",
+      "job": "service-integration",
+      "path": "third_party/google-docs",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "9615361026e6458a3ffacd064a8a5473126be010e753c864165dec22880bd956",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-drive",
+      "job": "documents",
+      "path": "third_party/google-drive",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "5df04c5f5e3f7f004f62d3424b5b266484046cc050ba27a4d577158f534916a2",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-sheets",
+      "job": "service-integration",
+      "path": "third_party/google-sheets",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "f8f993a0334ee8b63b217ee1126cf0b8fce25b21aa9869dbce7c0af89420f909",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "google-slides",
+      "job": "service-integration",
+      "path": "third_party/google-slides",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "3c75f941cea8760d754b86ff1bbeed4b3acaf9f1094cb9d623b0a83ce953b7f2",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "guru",
+      "job": "service-integration",
+      "path": "third_party/guru",
+      "status": "selected",
+      "categories": ["research"],
+      "sourceContentHash": "4f1e8a93c6bf6f6b5f7114373e4b18bf215ef92227cb532ce11fe0f0ea595a3c",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "hubspot",
+      "job": "service-integration",
+      "path": "third_party/hubspot",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "b255d60e37a52bd5ee3dd29f2427241485046e00b1ce07657032e4dfa10cf7ad",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "hunter",
+      "job": "service-integration",
+      "path": "third_party/hunter",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "830290b892f2e54e12649782dcbb39fc625695f645273a7c0bcee0b8ccd9483e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "interactive-brokers",
+      "job": "service-integration",
+      "path": "third_party/interactive-brokers",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "a087012258ed5c6021e27d9024e81b0e7a0007e95fedfbefece39e4176e47a5a",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "intercom",
+      "job": "customer-support",
+      "path": "third_party/intercom",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "c91b246cc051ca5f80450aef82024cd211c28645c9dbf28fa8a8ff6061140ed6",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "jotform",
+      "job": "service-integration",
+      "path": "third_party/jotform",
+      "status": "selected",
+      "categories": ["data-analytics"],
+      "sourceContentHash": "26be44237c59b561752de3b887c698bbde67f1080a30fd1a509865b8bcb20c01",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "juicebox",
+      "job": "service-integration",
+      "path": "third_party/juicebox",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "561f9e2297b382720534d2dc620e11ba587d827ed822fbe15b94e94cf0ee2872",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "klaviyo",
+      "job": "service-integration",
+      "path": "third_party/klaviyo",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "cfbf30f1d36cc4ae7e8825f46193e968c32b413feeb647bb25bf82e0de950733",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "mailerlite",
+      "job": "service-integration",
+      "path": "third_party/mailerlite",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "f5d580694b872cfb90bbcc30577bfc1f921d45c4a24b2c5f46d711dd960eb91a",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "meltwater",
+      "job": "service-integration",
+      "path": "third_party/meltwater",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "20002e27233a3a774904ddd2bbbd51a446d376fc5499a711fc2756fc7a742904",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "mem",
+      "job": "service-integration",
+      "path": "third_party/mem",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "e242b6dc0c989621a03476416dfdbf8655fc81e6f012730c278ce7630e5b0b8f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "mercury",
+      "job": "service-integration",
+      "path": "third_party/mercury",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "0bbcaa97c407423e6c3907187fd9d6387f3f07f74a59c612b03e16104ace63dd",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "navan",
+      "job": "service-integration",
+      "path": "third_party/navan",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "3c225a69494611d7f49067df4a7777409389990a4e53d98b2ddf84f6f3076a3f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "onedrive",
+      "job": "service-integration",
+      "path": "third_party/onedrive",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "81d026c4a402b59c6a8c8509a3b148f77a4f7f2c97b4512ff03abda0d831a532",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "otter",
+      "job": "service-integration",
+      "path": "third_party/otter",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "9e34cd593c1bc5498bbd7977249bea030bceab73b093b39e1ed5e5781908f7df",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "outlook",
+      "job": "email",
+      "path": "third_party/outlook",
+      "status": "selected",
+      "categories": ["inbox-collaboration"],
+      "sourceContentHash": "c999b9e36bb015d61bfaf5f521fcc77cb075d890360ed01b72fb0b57f66cae72",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "outlook-calendar",
+      "job": "calendar",
+      "path": "third_party/outlook-calendar",
+      "status": "selected",
+      "categories": ["scheduling"],
+      "sourceContentHash": "88bb4d8819026083aa0fc722914d754db662df7e0304509cf86ce1753183771e",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "outreach",
+      "job": "service-integration",
+      "path": "third_party/outreach",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "e1b5daf1297c32f5c78a99bd570265fd8ed5b5a127e1f0d0046840a6c5f61256",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "plaud",
+      "job": "service-integration",
+      "path": "third_party/plaud",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "65dffeaa407f827bc64bb64bc57246cc97b5947134b4da82feb963fef30f653b",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "playwright",
+      "job": "browser-automation",
+      "path": "third_party/playwright",
+      "status": "selected",
+      "categories": ["computer-use"],
+      "sourceContentHash": "1d1061b5f571e30bbd1dd17c0227d985b5e39562bd903b5db9940c4004ae6dfc",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "posthog",
+      "job": "product-analytics",
+      "path": "third_party/posthog-mcp",
+      "status": "selected",
+      "categories": ["data-analytics"],
+      "sourceContentHash": "2196460d0b48591de9b9ad6671d13e71e082f75171ebc99d6fa0fead139fd75f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "profound",
+      "job": "service-integration",
+      "path": "third_party/profound",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "25afe4470719d06525d26ac85a916767fdf8cf16fa33d32669896b09476d1d6b",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "readwise",
+      "job": "service-integration",
+      "path": "third_party/readwise",
+      "status": "selected",
+      "categories": ["research"],
+      "sourceContentHash": "017d2f3c521720138c2945ad080f067326ff595222bae4605e9baee02498eaa9",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "robinhood",
+      "job": "service-integration",
+      "path": "third_party/robinhood",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "7af62863202ffcd1771e975a94ed652b9f1a6069da00c3022db2d0668336a607",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "salesforce",
+      "job": "service-integration",
+      "path": "third_party/salesforce",
+      "status": "blocked",
+      "categories": ["integrations"],
+      "sourceContentHash": "37658e7191e22357870312dbbb9ab280ed18ed4ee5a0d1be2fbd2382a0b5de57",
+      "reasons": ["Invalid or empty mcpServers capability", "No runnable OpenClaw capability"]
+    },
+    {
+      "integration": "semrush",
+      "job": "service-integration",
+      "path": "third_party/semrush",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "8483b618ae0218b86003d04a9c1947180775e1315de61c684d40f335d2eb8725",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "sharepoint",
+      "job": "documents",
+      "path": "third_party/sharepoint",
+      "status": "selected",
+      "categories": ["documents-files"],
+      "sourceContentHash": "a34d2a85af080db56a3686cf03a40e42b12ec1c3cfa2dc3fbb80bde31a0d0de8",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "shopify",
+      "job": "commerce",
+      "path": "third_party/shopify-store",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "c490be98efb124be4f381105fee0e8ea2d4e6717da86856e101379b7ed5b1695",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "similarweb",
+      "job": "service-integration",
+      "path": "third_party/similarweb",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "6f7fe3367da47b03e015b07068e3fea26766c127e70a296d53fb2286ea229ff0",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "smartsheet",
+      "job": "service-integration",
+      "path": "third_party/smartsheet",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "b8253fcf1dcc108532583d66f856d98d31979072cbd69a9f7fb4ff03d5e58bfe",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "sp-global",
+      "job": "service-integration",
+      "path": "third_party/sp-global",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "788a094b70f95308d63ee3aa9f6010fee6e8c881c54e508b86fb0d027853124a",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "statsig",
+      "job": "service-integration",
+      "path": "third_party/statsig",
+      "status": "selected",
+      "categories": ["data-analytics"],
+      "sourceContentHash": "9c9906b4b41e3654b6f3570736a0969e14ffdf60d88f94a4e1b640de2973548d",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "teams",
+      "job": "service-integration",
+      "path": "third_party/teams",
+      "status": "selected",
+      "categories": ["inbox-collaboration"],
+      "sourceContentHash": "6d05aced122bfbad6de60ef8de5373bf7f04356995058a202eb25afeead90766",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "tinyfish",
+      "job": "service-integration",
+      "path": "third_party/tinyfish",
+      "status": "selected",
+      "categories": ["web"],
+      "sourceContentHash": "df635e0ca2198e85c077ab087aa13fd117b2d27da61f41af8fb596ec66106f2c",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "todoist",
+      "job": "service-integration",
+      "path": "third_party/todoist",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "1cd9ac58696903cb1b6e58b86bba95fde2cadcfb2d93a2dccf984617cfa40cb3",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "trello",
+      "job": "service-integration",
+      "path": "third_party/trello",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "b36b6d93bf8e9702379521c8aca905dbfe03611cb97809adcb8c6b66f3ba5291",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "typeform",
+      "job": "service-integration",
+      "path": "third_party/typeform",
+      "status": "selected",
+      "categories": ["data-analytics"],
+      "sourceContentHash": "009b532deaebbc1f8e88ce75a7e31d04c27a3fd54920bc4ce41d1e9ad4db3236",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "upwork",
+      "job": "service-integration",
+      "path": "third_party/upwork",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "1b8b9dfe21f821e81873149fca16cbe5672cd3a5d50ef307be01a541118bce7d",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "webull",
+      "job": "service-integration",
+      "path": "third_party/webull",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "8909ec713708e7bdf44950abb8bc3177e56c6ca6d2bf5de6c95b1bc37d90c05f",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "workable",
+      "job": "service-integration",
+      "path": "third_party/workable",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "765fe8ac26bd625808a37a18e8c844254f1fbb91f7fe623c52c9a18de5c1e054",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "wrike",
+      "job": "service-integration",
+      "path": "third_party/wrike",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "25ac2ce7b167d413a2e151f99413645acbab02b32c15aadd9cd6f49c4ab3c8ed",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "x",
+      "job": "service-integration",
+      "path": "third_party/x",
+      "status": "selected",
+      "categories": ["inbox-collaboration"],
+      "sourceContentHash": "3b4f7e904b17c22ab02445646da786dffff699feb17d656998a245280a00e810",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "x-ads",
+      "job": "service-integration",
+      "path": "third_party/x-ads",
+      "status": "selected",
+      "categories": ["sales-marketing"],
+      "sourceContentHash": "caf61c28ed6fddf7c98758799c82cf93a7f2725ef30546bf5ef4a55b79ac2d14",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "x-money",
+      "job": "service-integration",
+      "path": "third_party/x-money",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "843dab04af53fc51bcd09f6407399c68534adbf073db3064cca7cff051e51e76",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "xero",
+      "job": "service-integration",
+      "path": "third_party/xero",
+      "status": "selected",
+      "categories": ["finance-payments"],
+      "sourceContentHash": "6a26424a6cc0df85002e6b7bd186b6bbd9f27af70b6c4038f8403ff34d6cb1d2",
+      "reasons": ["Canonical Cursor source selected"]
+    },
+    {
+      "integration": "zoom",
+      "job": "meeting-knowledge",
+      "path": "third_party/zoom",
+      "status": "selected",
+      "categories": ["productivity"],
+      "sourceContentHash": "fe5b53ce813ae753443549839f5e975ef7a396a03650dc085dfa3e67ff00cb23",
+      "reasons": ["Canonical Cursor source selected"]
+    }
+  ]
+}
