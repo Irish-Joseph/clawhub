@@ -940,5 +940,80 @@
       "ci:static passed",
       "ci:packages passed (23 CLI artifact tests; Node and Bun both pass)"
     ]
+  },
+  "githubCI": {
+    "head": "64cb2ce3f84ef9771178b273366229bf20d0aa98",
+    "conclusion": "success",
+    "url": "https://github.com/openclaw/clawhub/actions/runs/36364490628",
+    "jobs": [
+      {
+        "name": "e2e-http",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages",
+        "conclusion": "success"
+      },
+      {
+        "name": "static",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / old-cli-publish",
+        "conclusion": "success"
+      },
+      {
+        "name": "types-build",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-smoke",
+        "conclusion": "success"
+      },
+      {
+        "name": "unit",
+        "conclusion": "success"
+      },
+      {
+        "name": "claws-openclaw-contract",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / publish-new-version",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / account-cleanup",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / moderation-malicious",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / star-sync",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / company-plugin-sync",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / inspector-version",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / publish-generated-card",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth / profile-context",
+        "conclusion": "success"
+      },
+      {
+        "name": "playwright-local-auth",
+        "conclusion": "success"
+      }
+    ]
   }
 }

@@ -72,3 +72,5 @@ Production synchronization remains disabled (all proposed sources are unapproved
 ## Final CI portability fix
 
 `64cb2ce3f8 test: ignore filesystem order in empty bundle upload proof` ([PR #3830](https://github.com/openclaw/clawhub/pull/3830)). Linux/Bun returned both correct zero-byte files in reverse order. The test now sorts received filenames before exact comparison, retaining exact count/name/size assertions. The full `ci:packages` and `ci:static` gates passed again. This is a test-only change; browser/download/install evidence was captured at `8be2316a16` and the runtime source tree is unchanged. GitHub CI reruns on the final head.
+
+Final-head [GitHub CI](https://github.com/openclaw/clawhub/actions/runs/36364490628) **passed**, including static, unit coverage, types/build, packages (Linux Node/Bun artifact regressions), HTTP/CLI e2e, public browser smoke and all local-auth browser shards.
