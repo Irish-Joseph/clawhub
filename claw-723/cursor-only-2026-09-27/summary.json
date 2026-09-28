@@ -4,8 +4,8 @@
   "scenario": "CLAW-723 Cursor-only crawl and real catalog/download/install proof",
   "provider": "real local ClawHub + isolated Playwright Chromium",
   "baseline": "ec1d459396 (prior preview, before local fixture cleanup)",
-  "candidate": "8be2316a1619aaf9fa1057ba7e47ec078483c1ed",
-  "validatedIntegrationCommit": "3fc501fecf (identical tree)",
+  "candidate": "64cb2ce3f84ef9771178b273366229bf20d0aa98",
+  "validatedIntegrationCommit": "88e50f4c8bb5a6cfcccd137154048334d90d0c96 (identical tree)",
   "lanes": [
     {
       "name": "baseline",
@@ -930,5 +930,15 @@
       "subject": "fix: preserve empty plugin filenames in CLI uploads"
     }
   ],
-  "security": "ClawScan/VirusTotal verdicts are simulated local fixtures. Plugin Inspector, immutable archive verification, catalog/download and OpenClaw installation are real. No third-party product login or production publication."
+  "security": "ClawScan/VirusTotal verdicts are simulated local fixtures. Plugin Inspector, immutable archive verification, catalog/download and OpenClaw installation are real. No third-party product login or production publication.",
+  "runtimeProofCapturedAt": "8be2316a1619aaf9fa1057ba7e47ec078483c1ed (runtime tree unchanged; only test assertion ordering changed)",
+  "postProofTestFix": {
+    "commit": "64cb2ce3f84ef9771178b273366229bf20d0aa98",
+    "subject": "test: ignore filesystem order in empty bundle upload proof",
+    "cause": "Linux/Bun returned the same two empty files in reverse filesystem order",
+    "validation": [
+      "ci:static passed",
+      "ci:packages passed (23 CLI artifact tests; Node and Bun both pass)"
+    ]
+  }
 }

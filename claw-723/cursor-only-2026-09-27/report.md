@@ -6,7 +6,7 @@ The existing ClawHub stack now accepts only company/product integrations under `
 
 - User preview: http://localhost:54662/plugins (MacBook loopback tunnel); actual runtime http://127.0.0.1:55880.
 - Baseline: `ec1d459396`, the prior running preview with five OpenAI and 78 Cursor crawl fixtures plus 2,194 production snapshot listings.
-- Candidate: `8be2316a1619aaf9fa1057ba7e47ec078483c1ed`; its tree exactly matches validated integration `3fc501fecf`, based on upstream main `b0e34a98cd`.
+- Candidate: `64cb2ce3f84ef9771178b273366229bf20d0aa98`; its tree exactly matches validated integration `88e50f4c8bb5a6cfcccd137154048334d90d0c96`, based on upstream main `b0e34a98cd`.
 - Result: **2,277 → 2,272** catalog entries. All **2,194 production snapshot listings** retained; **78 Cursor**, **zero OpenAI crawl fixtures**. The five OpenAI versions return 404 through the public download route after guarded local fixture soft-deletion. Their archived records are retained.
 - Fresh source commit: `ecc249f1e306fc64ddf83c7bed16cacf7c2239db`; **79 scoped, 78 eligible, one blocked Salesforce entry** (invalid/empty MCP capability). All 78 sources remain unchanged, so the real reviewed sync apply creates no new versions.
 - Desktop 1440×900 and mobile 390×844: OpenAI before/after, Cursor profile, Attio provenance/detail, combined production catalog/current categories. Zero page errors and zero horizontal overflow. The redundant Source author line is absent; original source attribution remains in the bundle.
@@ -68,3 +68,7 @@ Autoreview findings on unsafe paths, precise fixture identity and exact duplicat
 - [8be2316a16 fix: preserve empty plugin filenames in CLI uploads](https://github.com/openclaw/clawhub/pull/3830)
 
 Production synchronization remains disabled (all proposed sources are unapproved). No PR was merged. Patrick’s approval is required before landing.
+
+## Final CI portability fix
+
+`64cb2ce3f8 test: ignore filesystem order in empty bundle upload proof` ([PR #3830](https://github.com/openclaw/clawhub/pull/3830)). Linux/Bun returned both correct zero-byte files in reverse order. The test now sorts received filenames before exact comparison, retaining exact count/name/size assertions. The full `ci:packages` and `ci:static` gates passed again. This is a test-only change; browser/download/install evidence was captured at `8be2316a16` and the runtime source tree is unchanged. GitHub CI reruns on the final head.
