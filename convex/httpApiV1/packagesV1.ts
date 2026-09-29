@@ -99,7 +99,7 @@ import {
   json,
   parsePackagePathSegments,
   publicApiOrigin,
-  resolveTagsBatch,
+  resolvePublicSkillVersions,
   requireApiTokenUserOrResponse,
   requireAdminOrResponse,
   requireModeratorOrResponse,
@@ -1275,8 +1275,8 @@ async function resolveSkillTags(
   skillId: Id<"skills">,
   tags: Record<string, Id<"skillVersions">>,
 ): Promise<Record<string, string>> {
-  const [resolved] = await resolveTagsBatch(ctx, [tags], [skillId]);
-  return resolved ?? {};
+  const [resolved] = await resolvePublicSkillVersions(ctx, [{ skillId, tags }]);
+  return resolved.tags;
 }
 
 function isSkillOfficial(skill: SkillPackageDocLike) {
