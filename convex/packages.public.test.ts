@@ -1549,10 +1549,10 @@ function makeDigestCtx(options: {
   };
   const takeForTable = (table: string) =>
     vi.fn(async (limit: number) => {
-      take(limit);
+      if (Number.isFinite(limit)) take(limit);
       return (rowsByTable.get(table) ?? []).slice(0, limit);
     });
-  const takeByTable = new Map<string, ReturnType<typeof vi.fn>>();
+  const takeByTable = new Map<string, ReturnType<typeof takeForTable>>();
   const getTake = (table: string) => {
     const existing = takeByTable.get(table);
     if (existing) return existing;
@@ -1560,6 +1560,26 @@ function makeDigestCtx(options: {
     takeByTable.set(table, next);
     return next;
   };
+  const streamedDigests: Array<Record<string, unknown>> = [];
+  const closeStream = vi.fn();
+  const streamRows = (readRows: (limit: number) => Promise<Array<Record<string, unknown>>>) => ({
+    [Symbol.asyncIterator]: () => {
+      const rows = readRows(Number.POSITIVE_INFINITY);
+      let offset = 0;
+      return {
+        next: async () => {
+          const row = (await rows)[offset++];
+          if (!row) return { done: true as const, value: undefined };
+          streamedDigests.push(row);
+          return { done: false as const, value: row };
+        },
+        return: async () => {
+          closeStream();
+          return { done: true as const, value: undefined };
+        },
+      };
+    },
+  });
   const searchTake = vi.fn();
   const stringifySearchValue = (value: unknown) =>
     typeof value === "string" ||
@@ -1602,6 +1622,7 @@ function makeDigestCtx(options: {
         return {
           paginate: getPaginate(table),
           take: getTake(table),
+          ...streamRows(getTake(table)),
         };
       }),
     };
@@ -1615,6 +1636,8 @@ function makeDigestCtx(options: {
     paginate,
     take,
     searchTake,
+    streamedDigests,
+    closeStream,
     ctx: {
       db: {
         get: vi.fn(async (id: string) => {
@@ -1840,6 +1863,7 @@ function makeDigestCtx(options: {
                     order: vi.fn(() => ({
                       paginate: getPaginate(table),
                       take: vi.fn(async (limit: number) => matches.slice(0, limit)),
+                      ...streamRows(async (limit) => matches.slice(0, limit)),
                     })),
                   };
                 }
@@ -1866,7 +1890,7 @@ function makeDigestCtx(options: {
                   };
                   builder?.(queryBuilder);
                   const takeFamilyRows = async (limit: number) => {
-                    take(limit);
+                    if (Number.isFinite(limit)) take(limit);
                     return (rowsByTable.get(table) ?? [])
                       .filter((row) => row.family === family)
                       .filter((row) => {
@@ -1885,6 +1909,7 @@ function makeDigestCtx(options: {
                     order: vi.fn(() => ({
                       paginate: getPaginate(table),
                       take: vi.fn(takeFamilyRows),
+                      ...streamRows(takeFamilyRows),
                     })),
                   };
                 }
@@ -1950,7 +1975,7 @@ function makeDigestCtx(options: {
                 };
                 builder?.(queryBuilder);
                 const takeRows = async (limit: number) => {
-                  take(limit);
+                  if (Number.isFinite(limit)) take(limit);
                   return (rowsByTable.get(table) ?? [])
                     .filter((row) =>
                       filters.every(({ field, value }) => readTestField(row, field) === value),
@@ -1961,6 +1986,7 @@ function makeDigestCtx(options: {
                   order: vi.fn(() => ({
                     paginate: getPaginate(table),
                     take: vi.fn(takeRows),
+                    ...streamRows(takeRows),
                   })),
                 };
               }
@@ -1991,7 +2017,7 @@ function makeDigestCtx(options: {
                 };
                 builder?.(queryBuilder);
                 const takeFamilyRows = async (limit: number) => {
-                  take(limit);
+                  if (Number.isFinite(limit)) take(limit);
                   return (rowsByTable.get(table) ?? [])
                     .filter((row) => row.family === family)
                     .filter((row) => !exactTopic || row.topic === exactTopic)
@@ -2007,6 +2033,7 @@ function makeDigestCtx(options: {
                   order: vi.fn(() => ({
                     paginate: getPaginate(table, family),
                     take: vi.fn(takeFamilyRows),
+                    ...streamRows(takeFamilyRows),
                   })),
                 };
               }
@@ -2032,25 +2059,23 @@ function makeDigestCtx(options: {
               };
               builder?.(queryBuilder);
               const baseQuery = withIndex(table, indexName);
+              const takeTopicRows = async (limit: number) => {
+                if (Number.isFinite(limit)) take(limit);
+                return (rowsByTable.get(table) ?? [])
+                  .filter((row) => {
+                    const rowTopic = typeof row.topic === "string" ? row.topic : "";
+                    if (exactTopic) return rowTopic === exactTopic;
+                    return rowTopic >= lowerBound && rowTopic < upperBound;
+                  })
+                  .slice(0, limit);
+              };
               return {
                 ...baseQuery,
-                order: () => {
-                  const ordered = baseQuery.order();
-                  return {
-                    ...ordered,
-                    take: async (limit: number) => {
-                      take(limit);
-                      const rows = rowsByTable.get(table) ?? [];
-                      return rows
-                        .filter((row) => {
-                          const rowTopic = typeof row.topic === "string" ? row.topic : "";
-                          if (exactTopic) return rowTopic === exactTopic;
-                          return rowTopic >= lowerBound && rowTopic < upperBound;
-                        })
-                        .slice(0, limit);
-                    },
-                  };
-                },
+                order: () => ({
+                  ...baseQuery.order(),
+                  take: takeTopicRows,
+                  ...streamRows(takeTopicRows),
+                }),
               };
             },
           };
@@ -6355,7 +6380,7 @@ describe("packages public queries", () => {
   });
 
   it("recalls a deep combined category match without native pagination", async () => {
-    const { ctx, paginate, take } = makeDigestCtx({
+    const { ctx, paginate } = makeDigestCtx({
       topicPages: [
         {
           page: Array.from({ length: 50 }, (_, index) =>
@@ -6391,7 +6416,6 @@ describe("packages public queries", () => {
 
     expect(result.map((entry) => entry.package.name)).toEqual(["calendar-api"]);
     expect(paginate).not.toHaveBeenCalled();
-    expect(take).toHaveBeenCalledWith(300);
   });
 
   it("ranks bounded candidates from every stable family before applying the search limit", async () => {
@@ -6438,7 +6462,7 @@ describe("packages public queries", () => {
           pluginCategoryTags: ["channels"],
         }),
       );
-    const { ctx, paginate, take } = makeDigestCtx({
+    const { ctx, paginate } = makeDigestCtx({
       topicPagesByFamily: {
         skill: [
           { page: noisePage("skill", 1), isDone: false, continueCursor: "skill:2" },
@@ -6494,8 +6518,6 @@ describe("packages public queries", () => {
       });
       expect(result.map((entry) => entry.package.name)).toEqual(["calendar-bundle-api"]);
       expect(paginate).not.toHaveBeenCalled();
-      expect(take).toHaveBeenCalledWith(167);
-      expect(take).toHaveBeenCalledWith(166);
     } finally {
       if (previous === undefined) delete process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
       else process.env.CLAWHUB_EXPERIMENTAL_CLAWS = previous;
@@ -6505,7 +6527,7 @@ describe("packages public queries", () => {
   it("scans each stable family past the first combined-filter window while Claws are disabled", async () => {
     const previous = process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
     delete process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
-    const { ctx, paginate, take } = makeDigestCtx({
+    const { ctx, paginate } = makeDigestCtx({
       topicPages: [
         {
           page: Array.from({ length: 50 }, (_, index) =>
@@ -6544,11 +6566,218 @@ describe("packages public queries", () => {
 
       expect(result.map((entry) => entry.package.name)).toEqual(["calendar-skill-api"]);
       expect(paginate).not.toHaveBeenCalled();
-      expect(take).toHaveBeenCalledWith(167);
     } finally {
       if (previous === undefined) delete process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
       else process.env.CLAWHUB_EXPERIMENTAL_CLAWS = previous;
     }
+  });
+
+  it("uses spare capacity to recall a row 168 match while other families are empty", async () => {
+    const previous = process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
+    delete process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
+    const { ctx, paginate } = makeDigestCtx({
+      topicPages: [
+        {
+          page: Array.from({ length: 167 }, (_, index) =>
+            makeDigest(`calendar-plugin-noise-${index}`, {
+              family: "code-plugin",
+              topic: "calendar",
+              topics: ["calendar"],
+              pluginCategoryTags: ["channels"],
+            }),
+          ),
+          isDone: false,
+          continueCursor: "later",
+        },
+        {
+          page: [
+            makeDigest("calendar-plugin-api", {
+              family: "code-plugin",
+              topic: "calendar",
+              topics: ["calendar"],
+              pluginCategoryTags: ["tools"],
+            }),
+          ],
+          isDone: true,
+          continueCursor: "",
+        },
+      ],
+    });
+
+    try {
+      const result = await searchPublicHandler(ctx, {
+        query: "calendar",
+        topic: "calendar",
+        category: "tools",
+        limit: 1,
+      });
+
+      expect(result.map((entry) => entry.package.name)).toEqual(["calendar-plugin-api"]);
+      expect(paginate).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env.CLAWHUB_EXPERIMENTAL_CLAWS;
+      else process.env.CLAWHUB_EXPERIMENTAL_CLAWS = previous;
+    }
+  });
+
+  it.each([299, 300])(
+    "stops at six 50-document windows with %i rows ahead of the match",
+    async (noiseCount) => {
+      const rows = Array.from({ length: noiseCount }, (_, index) =>
+        makeDigest(`noise-${index}`, {
+          topic: "calendar",
+          topics: ["calendar"],
+          pluginCategoryTags: ["channels"],
+        }),
+      );
+      rows.push(
+        makeDigest("last-match", {
+          displayName: "Pineedle",
+          topic: "calendar",
+          topics: ["calendar"],
+          pluginCategoryTags: ["tools"],
+        }),
+      );
+      const { ctx, streamedDigests, closeStream } = makeDigestCtx({
+        topicPages: [{ page: rows, isDone: true, continueCursor: "" }],
+      });
+      const result = await searchPublicHandler(ctx, {
+        query: "needle",
+        family: "code-plugin",
+        topic: "calendar",
+        category: "tools",
+        limit: 1,
+      });
+      expect(result.map((entry) => entry.package.name)).toEqual(
+        noiseCount === 299 ? ["last-match"] : [],
+      );
+      expect(streamedDigests).toHaveLength(300);
+      expect(closeStream).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("caps fallback reads at 500 documents while giving each family a turn", async () => {
+    vi.stubEnv("CLAWHUB_EXPERIMENTAL_CLAWS", undefined);
+    const families = ["skill", "code-plugin", "bundle-plugin"] as const;
+    const rows = families.flatMap((family) =>
+      Array.from({ length: 301 }, (_, index) =>
+        makeDigest(`${family}-${index}`, {
+          family,
+          displayName: "Pineedle",
+          topic: "calendar",
+          topics: ["calendar"],
+          createdAt: index === 300 ? 100 : 1,
+        }),
+      ),
+    );
+    const { ctx, streamedDigests, closeStream } = makeDigestCtx({
+      topicPages: [{ page: rows, isDone: true, continueCursor: "" }],
+    });
+    expect(
+      await searchPublicHandler(ctx, {
+        query: "needle",
+        topic: "calendar",
+        createdAfter: 50,
+        limit: 1,
+      }),
+    ).toEqual([]);
+    expect(streamedDigests).toHaveLength(500);
+    expect(new Set(streamedDigests.map((row) => row.packageId)).size).toBe(500);
+    expect(
+      families.map((family) => streamedDigests.filter((row) => row.family === family).length),
+    ).toEqual([200, 150, 150]);
+    expect(closeStream).toHaveBeenCalledTimes(3);
+  });
+
+  it("finishes the fair round before ranking matches and closes streams at the quota", async () => {
+    vi.stubEnv("CLAWHUB_EXPERIMENTAL_CLAWS", undefined);
+    const families = ["skill", "code-plugin", "bundle-plugin"] as const;
+    const rows = families.flatMap((family, familyIndex) =>
+      Array.from({ length: 51 }, (_, index) =>
+        makeDigest(`${family}-${index}`, {
+          family,
+          displayName: "Pineedle",
+          topic: "calendar",
+          topics: ["calendar"],
+          createdAt: index === 0 ? 100 : 1,
+          stats: { stars: familyIndex * 100, downloads: 0, installs: 0, versions: 1 },
+        }),
+      ),
+    );
+    const { ctx, streamedDigests, closeStream } = makeDigestCtx({
+      topicPages: [{ page: rows, isDone: true, continueCursor: "" }],
+    });
+    const result = await searchPublicHandler(ctx, {
+      query: "needle",
+      topic: "calendar",
+      createdAfter: 50,
+      limit: 1,
+    });
+    expect(result.map((entry) => entry.package.name)).toEqual(["bundle-plugin-0"]);
+    expect(streamedDigests).toHaveLength(150);
+    expect(closeStream).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps visibility, category, time and text checks during a deep adaptive scan", async () => {
+    vi.stubEnv("CLAWHUB_EXPERIMENTAL_CLAWS", undefined);
+    const eligible = {
+      displayName: "Pineedle",
+      topic: "calendar",
+      topics: ["calendar"],
+      pluginCategoryTags: ["tools"],
+      createdAt: 100,
+    };
+    const rows = Array.from({ length: 167 }, (_, index) =>
+      makeDigest(`noise-${index}`, { ...eligible, pluginCategoryTags: ["channels"] }),
+    );
+    rows.push(
+      makeDigest("private", { ...eligible, channel: "private" }),
+      makeDigest("blocked", { ...eligible, scanStatus: "malicious" }),
+      makeDigest("unpublished", { ...eligible, latestVersion: undefined }),
+      makeDigest("old", { ...eligible, createdAt: 1 }),
+      makeDigest("unrelated", { ...eligible, displayName: "Unrelated", summary: "Unrelated" }),
+      makeDigest("valid", eligible),
+    );
+    const { ctx, streamedDigests } = makeDigestCtx({
+      topicPages: [{ page: rows, isDone: true, continueCursor: "" }],
+    });
+    const result = await searchPublicHandler(ctx, {
+      query: "needle",
+      topic: "calendar",
+      category: "tools",
+      createdAfter: 50,
+      limit: 1,
+    });
+    expect(result.map((entry) => entry.package.name)).toEqual(["valid"]);
+    expect(streamedDigests).toHaveLength(rows.length);
+  });
+
+  it("closes opened digest streams when candidate hydration fails", async () => {
+    vi.stubEnv("CLAWHUB_EXPERIMENTAL_CLAWS", undefined);
+    const { ctx, closeStream } = makeDigestCtx({
+      topicPages: [
+        {
+          page: [
+            makeDigest("valid", {
+              displayName: "Pineedle",
+              topic: "calendar",
+              topics: ["calendar"],
+              pluginCategoryTags: ["tools"],
+            }),
+          ],
+          isDone: true,
+          continueCursor: "",
+        },
+      ],
+    });
+    ctx.db.get.mockImplementation(async (id) => {
+      if (id === "packages:valid") throw new Error("fixture hydration failed");
+      return null;
+    });
+    await expect(
+      searchPublicHandler(ctx, { query: "needle", topic: "calendar", category: "tools", limit: 1 }),
+    ).rejects.toThrow("fixture hydration failed");
+    expect(closeStream).toHaveBeenCalledTimes(2);
   });
 
   it("bounds sparse combined-filter search scans", async () => {
@@ -6576,7 +6805,6 @@ describe("packages public queries", () => {
     expect(paginate).not.toHaveBeenCalled();
     expect(take).toHaveBeenCalledWith(20);
     expect(take).toHaveBeenCalledWith(200);
-    expect(take).toHaveBeenCalledWith(300);
   });
 
   it("recalls exact author topics without an explicit topic filter", async () => {
@@ -21265,7 +21493,7 @@ describe("restorePackageInternal", () => {
         createdAt: 10,
       }),
     );
-    const { ctx, paginate, take } = makeDigestCtx({
+    const { ctx, paginate } = makeDigestCtx({
       pages: [
         {
           page: olderMatches,
@@ -21295,6 +21523,5 @@ describe("restorePackageInternal", () => {
 
     expect(result.map((entry) => entry.package.name)).toEqual(["matching-new"]);
     expect(paginate).not.toHaveBeenCalled();
-    expect(take).toHaveBeenCalledWith(300);
   });
 });

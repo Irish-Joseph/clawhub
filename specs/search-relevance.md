@@ -64,6 +64,12 @@ result limits. Client-side filtering may remain as a defensive display check, bu
 only category or topic filter because limited global results can under-fill scoped search. Recall may
 stop at an explicit safety scan budget, but the result limit applies after scoped matches are found.
 
+Filtered package-search fallback advances one window per active family each round, then checks its
+match quota and ranks the collected candidates. It retains at most six windows per family and 500
+fallback digest documents overall; exhausted families leave unused capacity for the others. These
+are fallback scan bounds, not a guarantee of complete corpus recall or a cap on separate direct and
+curated candidate reads. Streams must close on quota, budget, exhaustion, and error exits.
+
 Search result counts in the web UI should describe what is known from the current request. Do not label a page-size-limited result length as a total corpus count. Prefer `N+`, "shown", or no count unless an indexed/materialized total is available.
 
 ## Browse Discovery Ranking

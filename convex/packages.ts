@@ -5605,26 +5605,59 @@ async function searchPackagesImpl(
     };
 
     if ((topic && category) || args.createdAfter !== undefined) {
-      // This helper returns a ranked array, not a paginated result. Convex permits
-      // only one native paginate() call per function, so scan bounded contiguous
-      // prefixes with take() and split the existing budget fairly across families.
-      const baseFamilyBudget = Math.floor(
-        MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS / searchFamilies.length,
-      );
-      const extraFamilyBudget = MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS % searchFamilies.length;
-      const digestGroups = await Promise.all(
-        searchFamilies.map(async (family, index) => {
-          const fairFamilyBudget = baseFamilyBudget + (index < extraFamilyBudget ? 1 : 0);
-          const familyScanLimit = Math.min(
-            fairFamilyBudget,
-            scanLimit * MAX_PUBLIC_LIST_FILTER_SCAN_PAGES,
-          );
-          return (await buildSearchDigestQuery(family)
-            .order("desc")
-            .take(familyScanLimit)) as PackageDigestLike[];
-        }),
-      );
-      await collectDigestMatches(digestGroups.flat());
+      // Native pagination is limited to one call per query. Keep one iterator per
+      // family so each round advances without rereading prefixes or wasting the
+      // shared budget on exhausted families. Rank only after finishing the round.
+      const scanStates = searchFamilies.map((family) => ({
+        family,
+        iterator: null as AsyncIterator<PackageDigestLike> | null,
+        isDone: false,
+        windowsScanned: 0,
+      }));
+      let remainingScanBudget = MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS;
+      try {
+        while (
+          authoritativeMatchCount() < targetCount &&
+          remainingScanBudget > 0 &&
+          scanStates.some(
+            (state) => !state.isDone && state.windowsScanned < MAX_PUBLIC_LIST_FILTER_SCAN_PAGES,
+          )
+        ) {
+          for (const state of scanStates) {
+            if (
+              state.isDone ||
+              state.windowsScanned >= MAX_PUBLIC_LIST_FILTER_SCAN_PAGES ||
+              remainingScanBudget <= 0
+            ) {
+              continue;
+            }
+            if (!state.iterator) {
+              const digestQuery = buildSearchDigestQuery(state.family).order("desc");
+              state.iterator = digestQuery[Symbol.asyncIterator]();
+            }
+            state.windowsScanned += 1;
+            const digests: PackageDigestLike[] = [];
+            const windowSize = Math.min(scanLimit, remainingScanBudget);
+            for (let index = 0; index < windowSize; index += 1) {
+              const next = await state.iterator.next();
+              if (next.done) {
+                state.isDone = true;
+                break;
+              }
+              remainingScanBudget -= 1;
+              digests.push(next.value);
+            }
+            await collectDigestMatches(digests);
+          }
+        }
+      } finally {
+        // Early quota/budget exits and failed reads must release every open stream.
+        await Promise.all(
+          scanStates.map(async (state) => {
+            if (state.iterator?.return) await state.iterator.return();
+          }),
+        );
+      }
     } else {
       const fallback =
         batchReads?.fallback ??
