@@ -110,6 +110,14 @@ export async function listSkillFiles(root: string, limits?: SkillFileLimits): Pr
     entries.push({ absPath, relPath, size: fileStat.size, contentType });
   });
 
+  // Directory entry order is filesystem-dependent (e.g. NTFS sorts
+  // case-insensitively, ext4 does not), so sort by code unit to keep the
+  // published file list — and the upload order it drives — deterministic
+  // across platforms.
+  entries.sort((left, right) =>
+    left.relPath < right.relPath ? -1 : left.relPath > right.relPath ? 1 : 0,
+  );
+
   if (limits) {
     const oversized = entries.find((entry) => entry.size > limits.maxFileBytes);
     if (oversized) {
