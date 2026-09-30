@@ -4,6 +4,7 @@
 
 ### Changes
 
+- Dependencies: refresh runtime and development dependencies, fix transitive dependency advisories, and pair Vitest and its coverage provider at 5.0.2 (thanks @Patrick-Erichsen for the auth test adaptation).
 - Workers: default Skill Cards to GPT-6 Sol with medium reasoning and fast service, and prepare semantic input reuse with stale-result fencing for separate activation after backend deployment.
 - Workers: preserve optional scanner model and reasoning settings in restricted subprocess environments without changing workflow defaults.
 - Web: organization publishers can upload durable PNG, JPEG, or WebP logos from settings instead of relying on hotlinked image URLs.
