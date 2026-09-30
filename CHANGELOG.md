@@ -4,9 +4,10 @@
 
 ### Changes
 
-- Dependencies: refresh runtime and development dependencies, fix transitive dependency advisories, and pair Vitest and its coverage provider at 5.0.2 (thanks @Patrick-Erichsen for the auth test adaptation).
+- Dependencies: refresh runtime and development dependencies and pair Vitest and its coverage provider at 5.0.2 (thanks @Patrick-Erichsen for the auth test adaptation).
 - CI: use Bun 1.3.14 so the updated server-rendering bundle loads without the Bun 1.3.10 label-scope parser error, and pin Node 24.15.0 for Vitest 5 checks and remote validation.
 - Web: initialize each request's CSP nonce before framework serialization so server-rendered hydration scripts retain their nonce after the router update.
+- CI: record dependency advisories from `bun audit` as warning annotations instead of failing `static` and blocking Deploy Test; known-malware findings still fail.
 - Workers: default Skill Cards to GPT-6 Sol with medium reasoning and fast service, and prepare semantic input reuse with stale-result fencing for separate activation after backend deployment.
 - Workers: preserve optional scanner model and reasoning settings in restricted subprocess environments without changing workflow defaults.
 - Web: organization publishers can upload durable PNG, JPEG, or WebP logos from settings instead of relying on hotlinked image URLs.
@@ -14,7 +15,13 @@
 
 ### Fixes
 
+- Publishing: settle retries of an exact staged package artifact before scans and Plugin Inspector run again, returning the pending or published result, and name a failed attempt with its recovery command instead of a bare "already exists".
+- CLI: read `Retry-After` and rate-limit headers from curl responses under Bun, so publishes back off for the time the server asks instead of retrying blind.
+- CLI: keep completed skill installs and updates when deleting an old backup fails, without rolling back the new files (thanks @SebTardif).
+- Publishing: prepare the Plugin Inspector OpenClaw target by streaming and verifying only its public declaration surface, so plugin publishes no longer run the Node action out of memory or fill `/tmp` with the full OpenClaw package.
 - Deploy: coalesce pending skills.sh syncs per ref before they enter the production deployment queue, while preserving active sync cleanup and queued manual deploys.
+
+- Dependencies: align brace-expansion and fast-uri overrides with their patched lockfile versions so dependency resolution cannot restore the vulnerable pins.
 
 - Workers: reserve Skill Card capacity by lease slot to avoid global queue contention, continue after partial batches, and release undelivered leases when input hydration fails.
 
