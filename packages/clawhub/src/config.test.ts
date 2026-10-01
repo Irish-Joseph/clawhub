@@ -1,7 +1,7 @@
 /* @vitest-environment node */
 
-import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEnvStubRegistry } from "../test/runtimeStubs.js";
 
