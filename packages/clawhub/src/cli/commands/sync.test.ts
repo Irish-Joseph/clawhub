@@ -1,5 +1,6 @@
 /* @vitest-environment node */
 
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createAuthTokenModuleMocks,
@@ -272,7 +273,12 @@ describe("cmdSync", () => {
       throw new Error(`Unexpected apiRequest: ${String(args.path)}`);
     });
 
+    let expectedScanRoot: string;
     try {
+      // The implementation resolves the relative root against --workdir while
+      // the cwd spy is active, so compute the expectation in the same context
+      // (on Windows, path.resolve borrows the drive from process.cwd()).
+      expectedScanRoot = resolve("/workspace", "scan");
       await cmdSync(
         makeGlobalOpts("/workspace"),
         {
@@ -288,9 +294,7 @@ describe("cmdSync", () => {
       cwdSpy.mockRestore();
     }
 
-    expect(
-      findSkillFolders.mock.calls.map((call) => String(call[0]).replace(/\\/g, "/")),
-    ).toContain("/workspace/scan");
+    expect(findSkillFolders).toHaveBeenCalledWith(expectedScanRoot);
     expect(
       mockCmdPublish.mock.calls.map((call) => (call[2] as { sourcePath?: string }).sourcePath),
     ).toEqual(["scan/new-skill", "scan/update-skill"]);
