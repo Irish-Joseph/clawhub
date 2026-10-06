@@ -727,15 +727,26 @@ function parseExactGitHubInstallIdentity(source: string, installUrl: string | nu
   return repository?.owner === owner && repository.repo === repo ? repository : null;
 }
 
+/**
+ * skills.sh list rows are raw upstream JSON that is cast without field
+ * validation; coerce non-string text fields so one malformed row degrades
+ * into the existing quarantine path instead of crashing the mirror page.
+ */
+function catalogRowText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+  return "";
+}
+
 export function buildSkillsShMirrorObservation(
   row: SkillsShCatalogListRow,
   sourcePageHtml?: string,
 ) {
-  const externalId = row.id.trim().toLowerCase();
-  const slug = row.slug.trim().toLowerCase();
-  const source = row.source.trim().toLowerCase();
+  const externalId = catalogRowText(row.id).trim().toLowerCase();
+  const slug = catalogRowText(row.slug).trim().toLowerCase();
+  const source = catalogRowText(row.source).trim().toLowerCase();
   const upstreamSourceType = normalizeUpstreamSourceType(row.sourceType);
-  const installUrl = row.installUrl?.trim() || null;
+  const installUrl = catalogRowText(row.installUrl).trim() || null;
   const identityError = (reason: SkillsShMirrorQuarantineReason) =>
     new SkillsShMirrorIdentityError(
       reason,
@@ -746,8 +757,8 @@ export function buildSkillsShMirrorObservation(
   const base = {
     externalId,
     slug,
-    displayName: row.name.trim() || slug,
-    sourceUrl: row.url.trim(),
+    displayName: catalogRowText(row.name).trim() || slug,
+    sourceUrl: catalogRowText(row.url).trim(),
     upstreamInstalls: row.installs,
     upstreamSourceType,
   };
@@ -813,10 +824,10 @@ function safeMirrorIdentityError(row: SkillsShCatalogListRow, error: unknown) {
 }
 
 function quarantinedMirrorRow(row: SkillsShCatalogListRow, reason: SkillsShMirrorQuarantineReason) {
-  const externalId = row.id.trim().toLowerCase().slice(0, 512) || "missing";
+  const externalId = catalogRowText(row.id).trim().toLowerCase().slice(0, 512) || "missing";
   const upstreamSourceType = normalizeUpstreamSourceType(row.sourceType);
-  const source = row.source.trim().toLowerCase().slice(0, 256) || "missing";
-  const installUrl = row.installUrl?.trim() || null;
+  const source = catalogRowText(row.source).trim().toLowerCase().slice(0, 256) || "missing";
+  const installUrl = catalogRowText(row.installUrl).trim() || null;
   console.warn(
     `Quarantined skills.sh mirror row: ${externalId} ` +
       `(reason=${reason}, ` +
@@ -1002,7 +1013,7 @@ async function resolveSkillsShMirrorObservation(
       };
     }
   }
-  const sourcePage = await fetchSkillsShIdentityPage(row.url.trim(), options);
+  const sourcePage = await fetchSkillsShIdentityPage(catalogRowText(row.url).trim(), options);
   if (!sourcePage.ok) {
     return {
       row: safeMirrorIdentityError(row, new SkillsShMirrorIdentityError(sourcePage.reason)),
@@ -1526,7 +1537,7 @@ export async function measureSkillsShTrendingSource(
     if (observedRows > catalogTotal) {
       throw new Error("skills.sh trending source exceeded its reported total");
     }
-    for (const row of response.data) present.add(row.id.trim().toLowerCase());
+    for (const row of response.data) present.add(catalogRowText(row.id).trim().toLowerCase());
     if (!response.pagination.hasMore) break;
     if (
       observedRows >= catalogTotal ||
@@ -1650,7 +1661,7 @@ function normalizedTaxonomyFields(value: unknown) {
 }
 
 function skillsShPageIdentityHash(rows: SkillsShCatalogListRow[]) {
-  return sha256Hex(rows.map((row) => `${row.id.trim().toLowerCase()}\n`).join(""));
+  return sha256Hex(rows.map((row) => `${catalogRowText(row.id).trim().toLowerCase()}\n`).join(""));
 }
 
 function capturedSkillsShCatalogRows(rows: SkillsShCatalogListRow[]) {
@@ -1910,7 +1921,7 @@ export async function measureSkillsShMirrorProofSource(
       });
     }
     for (const row of response.data) {
-      present.add(row.id.trim().toLowerCase());
+      present.add(catalogRowText(row.id).trim().toLowerCase());
       for (const key of sortedObjectKeys(row)) rowKeys.add(key);
       for (const key of normalizedTaxonomyFields(row)) taxonomyFields.add(key);
       if (!sampleRow && row.id.split("/").length === 3) sampleRow = row;
@@ -2689,21 +2700,25 @@ const REQUIRED_COLLISION_IDS = [
 ] as const;
 
 function isGitHubCatalogRow(row: SkillsShCatalogListRow) {
-  const source = row.source.trim().toLowerCase();
-  const slug = row.slug.trim().toLowerCase();
+  const source = catalogRowText(row.source).trim().toLowerCase();
+  const slug = catalogRowText(row.slug).trim().toLowerCase();
   return (
     row.sourceType === "github" &&
     source.split("/").length === 2 &&
     /^[a-z0-9][a-z0-9-]*$/.test(slug) &&
-    row.id.trim().toLowerCase() === `${source}/${slug}`
+    catalogRowText(row.id).trim().toLowerCase() === `${source}/${slug}`
   );
 }
 
 function normalizeListRow(row: SkillsShCatalogListRow) {
-  const [owner = "", repo = ""] = row.source.split("/");
-  const slug = row.slug.trim().toLowerCase();
+  const [owner = "", repo = ""] = catalogRowText(row.source).split("/");
+  const slug = catalogRowText(row.slug).trim().toLowerCase();
   return {
     ...row,
+    source: catalogRowText(row.source),
+    name: catalogRowText(row.name),
+    url: catalogRowText(row.url),
+    installUrl: catalogRowText(row.installUrl) || null,
     owner: owner.trim().toLowerCase(),
     repo: repo.trim().toLowerCase(),
     slug,

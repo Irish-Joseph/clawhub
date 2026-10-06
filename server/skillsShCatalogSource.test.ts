@@ -3381,3 +3381,141 @@ describe("skills.sh Vercel source boundary", () => {
     ).rejects.toThrow("dark Convex staging control");
   });
 });
+
+describe("malformed skills.sh list rows", () => {
+  it("coerces non-string identity fields instead of crashing observation", () => {
+    const malformedRow = {
+      id: 12345,
+      installUrl: null,
+      installs: 1,
+      name: "demo",
+      slug: "demo",
+      source: "example.com",
+      sourceType: "Well-Known",
+      url: "https://www.skills.sh/site/example.com/demo",
+    };
+    // Pre-fix this threw `TypeError: row.id.trim is not a function` before the
+    // identity check could run; now the numeric id is coerced and the row fails
+    // into the normal identity error carrying the coerced value.
+    expect(() => buildSkillsShMirrorObservation(malformedRow as never)).toThrow(
+      "Unsupported skills.sh mirror identity: 12345",
+    );
+  });
+
+  it("keeps measuring the page when one row has a numeric id", async () => {
+    const rows = [
+      {
+        id: "owner/repo/skill-a",
+        installUrl: "https://github.com/owner/repo",
+        installs: 3,
+        name: "skill-a",
+        slug: "skill-a",
+        source: "owner/repo",
+        sourceType: "github",
+        url: "https://www.skills.sh/owner/repo/skill-a",
+      },
+      {
+        id: 42,
+        installUrl: "https://github.com/owner/repo",
+        installs: 2,
+        name: "skill-b",
+        slug: "skill-b",
+        source: "owner/repo",
+        sourceType: "github",
+        url: "https://www.skills.sh/owner/repo/skill-b",
+      },
+    ];
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+      );
+      const page = Number(url.searchParams.get("page"));
+      const data = page === 0 ? rows : [];
+      return new Response(
+        JSON.stringify({
+          data,
+          pagination: { page, perPage: 500, total: 2, hasMore: false },
+        }),
+      );
+    });
+
+    const measured = await measureSkillsShTrendingSource({
+      fetchImpl: fetchImpl as typeof fetch,
+      oidcToken: "oidc-token",
+      minimumApiRequestIntervalMs: 0,
+      observedAt: "2026-07-24T19:44:11.437Z",
+    });
+
+    expect(measured.snapshotHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(measured.evidence.uniqueIds).toBe(2);
+  });
+
+  it("quarantines a malformed batch row and keeps the rest of the page in order", async () => {
+    const sourcePage = {
+      pagination: { page: 0, perPage: 500, total: 2, hasMore: false },
+      data: [
+        {
+          id: "owner/repo/skill",
+          installUrl: "https://github.com/owner/repo",
+          installs: 1,
+          name: "skill",
+          slug: "skill",
+          source: "owner/repo",
+          sourceType: "github",
+          url: "https://www.skills.sh/owner/repo/skill",
+        },
+        {
+          id: 12345,
+          installUrl: null,
+          installs: 1,
+          name: "demo",
+          slug: "demo",
+          source: "owner/repo",
+          sourceType: "github",
+          url: "https://www.skills.sh/owner/repo/demo",
+        },
+      ],
+    };
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+      );
+      if (url.href.endsWith("/api/v1/skills/owner/repo/skill")) {
+        return new Response(
+          JSON.stringify({
+            files: [{ contents: "# Skill", path: "SKILL.md" }],
+            hash: "a".repeat(64),
+            id: "owner/repo/skill",
+            installs: 1,
+            slug: "skill",
+            source: "owner/repo",
+          }),
+        );
+      }
+      return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
+    });
+
+    const batch = await fetchSkillsShMirrorBatch(
+      { page: 0, offset: 0, limit: 50, maxDetailBytes: 8192 },
+      {
+        fetchImpl: fetchImpl as typeof fetch,
+        oidcToken: "oidc-token",
+        minimumApiRequestIntervalMs: 0,
+        githubLocatorResolver: null,
+        sourcePage,
+      },
+    );
+
+    expect(batch.sourcePageIdentityHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(batch.rows).toHaveLength(2);
+    expect(batch.rows[0]).toMatchObject({
+      externalId: "owner/repo/skill",
+      sourceType: "github",
+    });
+    expect(batch.rows[1]).toMatchObject({
+      quarantined: true,
+      externalId: "12345",
+      reason: "unsupported-identity",
+    });
+  });
+});
