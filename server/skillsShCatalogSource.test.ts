@@ -3448,6 +3448,16 @@ describe("malformed skills.sh list rows", () => {
 
     expect(measured.snapshotHash).toMatch(/^[a-f0-9]{64}$/);
     expect(measured.evidence.uniqueIds).toBe(2);
+    const capturedRows = measured.sourcePages[0].rows;
+    expect(capturedRows).toHaveLength(2);
+    for (const row of capturedRows) {
+      expect(typeof row.id).toBe("string");
+      expect(typeof row.slug).toBe("string");
+      expect(typeof row.source).toBe("string");
+      expect(typeof row.name).toBe("string");
+      expect(typeof row.url).toBe("string");
+    }
+    expect(capturedRows[1].id).toBe("42");
   });
 
   it("quarantines a malformed batch row and keeps the rest of the page in order", async () => {
@@ -3517,5 +3527,105 @@ describe("malformed skills.sh list rows", () => {
       externalId: "12345",
       reason: "unsupported-identity",
     });
+  });
+});
+
+describe("malformed-first proof source pages", () => {
+  it("skips an invalid metadata candidate and samples the next valid row", async () => {
+    const validRow = {
+      id: "owner/repo/skill",
+      installUrl: null,
+      installs: 1,
+      name: "skill",
+      slug: "skill",
+      source: "owner/repo",
+      sourceType: "github",
+      url: "https://www.skills.sh/owner/repo/skill",
+    };
+    const malformedRow = {
+      id: 987,
+      installUrl: null,
+      installs: 1,
+      name: "bad",
+      slug: "bad",
+      source: "owner/repo",
+      sourceType: "github",
+      url: "https://www.skills.sh/owner/repo/bad",
+    };
+    const pages = [
+      {
+        data: [malformedRow, validRow],
+        pagination: { page: 0, perPage: 500, total: 2, hasMore: false },
+      },
+      {
+        data: [],
+        pagination: { page: 1, perPage: 500, total: 2, hasMore: false },
+      },
+    ];
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("/api/v1/skills?page=")) {
+        return new Response(JSON.stringify(pages.shift()));
+      }
+      if (url.includes("/api/v1/skills/search?")) {
+        return new Response(
+          JSON.stringify({
+            count: 1,
+            data: [validRow],
+            durationMs: 3,
+            query: "skill",
+            searchType: "full-text",
+          }),
+        );
+      }
+      if (url.endsWith("/api/v1/skills/owner/repo/skill")) {
+        return new Response(
+          JSON.stringify({
+            files: [{ contents: "# Skill", path: "SKILL.md" }],
+            hash: "a".repeat(64),
+            id: "owner/repo/skill",
+            installs: 1,
+            slug: "skill",
+            source: "owner/repo",
+          }),
+        );
+      }
+      if (url.includes("_rsc=")) {
+        return new Response(
+          '0:["$","div",null,{"children":"skill","className":"skill"}]\n1:{"prompt":"use skill"}\n',
+          { headers: { "Content-Type": "text/x-component" } },
+        );
+      }
+      if (url === validRow.url) {
+        return new Response(
+          '<!doctype html><script type="application/ld+json">' +
+            '{"@context":"https://schema.org","@type":"SoftwareApplication",' +
+            '"applicationCategory":"DeveloperApplication","name":"skill"}' +
+            "</script>",
+          { headers: { "Content-Type": "text/html; charset=utf-8" } },
+        );
+      }
+      return new Response(JSON.stringify({ error: "unexpected url" }), { status: 404 });
+    });
+
+    const measured = await measureSkillsShMirrorProofSource({
+      oidcToken: "oidc-token",
+      fetchImpl: fetchImpl as typeof fetch,
+      minimumApiRequestIntervalMs: 0,
+    });
+
+    expect(measured.catalogTotal).toBe(2);
+    expect(measured.evidence.pagination.uniqueIds).toBe(2);
+    expect(measured.evidence.fields.sampledExternalId).toBe("owner/repo/skill");
+    const capturedRows = measured.sourcePages[0].rows;
+    expect(capturedRows).toHaveLength(2);
+    for (const row of capturedRows) {
+      expect(typeof row.id).toBe("string");
+      expect(typeof row.slug).toBe("string");
+      expect(typeof row.source).toBe("string");
+      expect(typeof row.name).toBe("string");
+      expect(typeof row.url).toBe("string");
+    }
+    expect(capturedRows[0].id).toBe("987");
   });
 });

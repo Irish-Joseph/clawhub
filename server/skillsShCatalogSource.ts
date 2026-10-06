@@ -1660,20 +1660,45 @@ function normalizedTaxonomyFields(value: unknown) {
     .sort();
 }
 
+function skillsShMetadataSampleCandidate(
+  row: SkillsShCatalogListRow,
+): SkillsShCatalogListRow | null {
+  const id = catalogRowText(row.id).trim();
+  const source = catalogRowText(row.source).trim();
+  const slug = catalogRowText(row.slug).trim();
+  const sourceSegments = source.split("/");
+  const [owner = "", repo = ""] = sourceSegments;
+  if (
+    sourceSegments.length !== 2 ||
+    !isSkillsShIdentitySegment(owner) ||
+    !isSkillsShIdentitySegment(repo) ||
+    !isSkillsShIdentitySegment(slug) ||
+    catalogRowText(row.url).trim() === ""
+  ) {
+    return null;
+  }
+  try {
+    normalizeSkillsShId(id);
+  } catch {
+    return null;
+  }
+  return { ...row, id, source, slug };
+}
+
 function skillsShPageIdentityHash(rows: SkillsShCatalogListRow[]) {
   return sha256Hex(rows.map((row) => `${catalogRowText(row.id).trim().toLowerCase()}\n`).join(""));
 }
 
 function capturedSkillsShCatalogRows(rows: SkillsShCatalogListRow[]) {
   return rows.map((row) => ({
-    id: row.id,
-    installUrl: row.installUrl,
+    id: catalogRowText(row.id),
+    installUrl: catalogRowText(row.installUrl) || null,
     installs: row.installs,
-    name: row.name,
-    slug: row.slug,
-    source: row.source,
-    sourceType: row.sourceType,
-    url: row.url,
+    name: catalogRowText(row.name),
+    slug: catalogRowText(row.slug),
+    source: catalogRowText(row.source),
+    sourceType: catalogRowText(row.sourceType),
+    url: catalogRowText(row.url),
   }));
 }
 
@@ -1924,7 +1949,7 @@ export async function measureSkillsShMirrorProofSource(
       present.add(catalogRowText(row.id).trim().toLowerCase());
       for (const key of sortedObjectKeys(row)) rowKeys.add(key);
       for (const key of normalizedTaxonomyFields(row)) taxonomyFields.add(key);
-      if (!sampleRow && row.id.split("/").length === 3) sampleRow = row;
+      if (!sampleRow) sampleRow = skillsShMetadataSampleCandidate(row);
     }
     if (!response.pagination.hasMore) break;
     if (
