@@ -1663,22 +1663,31 @@ function normalizedTaxonomyFields(value: unknown) {
 function skillsShMetadataSampleCandidate(
   row: SkillsShCatalogListRow,
 ): SkillsShCatalogListRow | null {
-  const id = catalogRowText(row.id).trim();
+  const id = catalogRowText(row.id).trim().toLowerCase();
   const source = catalogRowText(row.source).trim();
   const slug = catalogRowText(row.slug).trim();
+  const url = catalogRowText(row.url).trim();
   const sourceSegments = source.split("/");
   const [owner = "", repo = ""] = sourceSegments;
   if (
+    id.split("/").length !== 3 ||
     sourceSegments.length !== 2 ||
     !isSkillsShIdentitySegment(owner) ||
     !isSkillsShIdentitySegment(repo) ||
     !isSkillsShIdentitySegment(slug) ||
-    catalogRowText(row.url).trim() === ""
+    url === ""
   ) {
     return null;
   }
   try {
     normalizeSkillsShId(id);
+  } catch {
+    return null;
+  }
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, "");
+    if (pathname !== `/${id}`) return null;
   } catch {
     return null;
   }
