@@ -1936,3 +1936,44 @@ clawhub-admin featured publish skill approved-skills.json --apply
 `publish` defaults to a dry run regardless of the file's `dryRun` value. Use
 `--apply` only after the exact selection has been approved. Counts describe recorded
 install events, not unique users or proven successful runtime installations.
+
+## Staff Content rights proxy
+
+`GET /api/v1/content-rights/{caseId}` and
+`POST /api/v1/content-rights/{caseId}/correspondence` forward to the Hermit
+content-rights origin (default `https://forms.openclaw.ai`, override with the
+`HERMIT_CONTENT_RIGHTS_BASE_URL` deployment env var; the shared service token
+comes from `CLAWHUB_BAN_APPEALS_TOKEN`). They require an admin API token and
+rate-limit as staff reads/writes. The correspondence POST forwards the staff
+form unchanged and adds an `actor` field carrying the acting user ID.
+
+### Timeout budget
+
+Both outbound Hermit requests are bounded by a ten-second abort deadline
+(`HERMIT_CONTENT_RIGHTS_FETCH_TIMEOUT_MS`). Rationale: ten seconds is generous
+for a responsive forms backend (representative correspondence uploads, including
+10 MB attachments, complete in well under a second) while staying far below the
+Convex platform action limit, so a stalled Hermit origin fails fast and free
+instead of pinning the action. The constant is exported so the budget can be
+calibrated in one place if production timing evidence ever requires a separate
+POST deadline.
+
+When the budget expires, the proxy returns its existing failure response:
+`502 Hermit content rights service unavailable`. The proxy performs **no
+automatic retries** — staff clients must not infer that a timed-out write was
+rolled back on Hermit's side.
+
+### Uncertain correspondence POST recovery
+
+A `502` on the correspondence POST can be returned **after** Hermit already
+recorded (or sent) the email. Recovery procedure:
+
+1. Inspect the case first: `GET /api/v1/content-rights/{caseId}` and check the
+   case's recorded correspondence/events for the entry you just attempted.
+2. If the entry is present, do nothing — the write landed; never resend an
+   already-sent email.
+3. Only if the case shows no record of the attempt may the correspondence be
+   resubmitted, and at most once per inspection result.
+
+This keeps the correspondence log free of duplicate emails after a stalled
+origin.
