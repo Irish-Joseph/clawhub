@@ -1965,18 +1965,28 @@ rolled back on Hermit's side.
 
 ### Uncertain correspondence POST recovery
 
-A `502` on the correspondence POST can be returned **after** Hermit already
-recorded (or sent) the email. Recovery procedure:
+The correspondence POST is the **archive** operation: it appends the exact
+correspondence and evidence to the Hermit case. It **never sends an email** —
+sending is the separate, sign-off-gated `clawhub-admin email send` step, and
+the archive step links the record to the sent message via
+`--provider-message-id`. A `502` on this POST therefore means the **archive**
+write may be incomplete; the email-send state is unaffected by this timeout.
 
-1. Inspect the case first: `GET /api/v1/content-rights/{caseId}` and check the
-   case's recorded correspondence/events for the entry you just attempted.
-2. If the entry is present, do nothing — the write landed; never resend an
-   already-sent email.
-3. An **empty or negative case read is not evidence that nothing was sent.**
-   The case read can be incomplete, paginated, or lagging, so it never
-   authorizes a resubmission on its own. Before any resend, confirm on the
-   Hermit side (the Hermit form admin view or the content-rights owner) that
-   the correspondence was not recorded or sent.
+Recovery procedure:
 
-This keeps the correspondence log free of duplicate emails after a stalled
-origin. Design record: `specs/content-rights-proxy.md`.
+1. Inspect the case: `GET /api/v1/content-rights/{caseId}` and check the
+   case's recorded correspondence for the entry you just attempted.
+2. If the entry is present, the archive write landed — no archive repair is
+   needed.
+3. If the entry is absent (or the read is inconclusive), reconcile what should
+   be archived (exact correspondence text, direction, provider message id) and
+   re-run the archive POST to repair the archive. Re-running the archive can
+   create a duplicate archive entry, so reconcile before resubmitting — but it
+   cannot send an email again.
+4. Never re-run `email send` because the archive POST timed out. Whether the
+   email was sent is tracked at the send step (dry-run by default; the sent
+   provider message id is what the archive record references).
+
+There is no duplicate-free guarantee on the correspondence log after archive
+repair; send de-duplication is the staff responsibility at the `email send`
+step. Design record: `specs/content-rights-proxy.md`.
