@@ -1972,8 +1972,11 @@ recorded (or sent) the email. Recovery procedure:
    case's recorded correspondence/events for the entry you just attempted.
 2. If the entry is present, do nothing — the write landed; never resend an
    already-sent email.
-3. Only if the case shows no record of the attempt may the correspondence be
-   resubmitted, and at most once per inspection result.
+3. An **empty or negative case read is not evidence that nothing was sent.**
+   The case read can be incomplete, paginated, or lagging, so it never
+   authorizes a resubmission on its own. Before any resend, confirm on the
+   Hermit side (the Hermit form admin view or the content-rights owner) that
+   the correspondence was not recorded or sent.
 
 This keeps the correspondence log free of duplicate emails after a stalled
-origin.
+origin. Design record: `specs/content-rights-proxy.md`.
