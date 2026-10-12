@@ -1,6 +1,6 @@
 {
   "name": "clawhub",
-  "version": "0.23.3",
+  "version": "0.24.0",
   "description": "ClawHub CLI \\u2014 install, update, search, and publish skills plus OpenClaw packages.",
   "homepage": "https://clawhub.ai",
   "bugs": {
@@ -54,7 +54,7 @@
     "yaml": "2.9.0"
   },
   "devDependencies": {
-    "@types/node": "26.5.1",
+    "@types/node": "26.6.4",
     "@typescript/native": "npm:typescript@7.0.2",
     "typescript": "6.0.3"
   },

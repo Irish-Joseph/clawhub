@@ -1,6 +1,7 @@
 /* @vitest-environment node */
 import type { RateLimitArgs, RateLimitReturns } from "@convex-dev/rate-limiter";
 import { getFunctionName } from "convex/server";
+import { ConvexError } from "convex/values";
 import { gzipSync, strFromU8, unzipSync } from "fflate";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { parseArk } from "../packages/schema/src/ark";
@@ -728,6 +729,45 @@ describe("httpApiV1 handlers", () => {
     expect(response.status).toBe(401);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(runQuery).not.toHaveBeenCalled();
+  });
+
+  it("requires the branch secret before issuing Staging export manifests", async () => {
+    const secret = "s".repeat(48);
+    vi.stubEnv("CLAWHUB_ENV", "staging");
+    vi.stubEnv("CLAWHUB_STAGING_EDGE_SECRET", secret);
+    vi.mocked(requireApiTokenUser).mockResolvedValue({
+      userId: "users:actor",
+      user: { _id: "users:actor", role: "user" },
+    } as never);
+    vi.mocked(getOptionalApiTokenUser).mockResolvedValue({
+      userId: "users:actor",
+      user: { _id: "users:actor", role: "user" },
+    } as never);
+    const verifyArchiveRequester = vi.fn(async () => undefined);
+    const runQuery = vi.fn();
+    const ctx = makeCtx({ runQuery });
+    const request = (edgeSecret?: string) =>
+      new Request("https://cheery-civet-733.convex.site/api/v1/skills/export", {
+        headers: {
+          authorization: "Bearer user-token",
+          "x-clawhub-archive-manifest": "v1",
+          "x-clawhub-vercel-oidc-token": "vercel-preview-oidc",
+          ...(edgeSecret ? { "x-clawhub-staging-edge-secret": edgeSecret } : {}),
+        },
+      });
+    const dependencies = {
+      verifyArchiveRequester,
+      signArchiveManifest: vi.fn(async () => "unused"),
+    };
+
+    expect((await __handlers.exportSkillsV1Handler(ctx, request(), dependencies)).status).toBe(401);
+    expect(verifyArchiveRequester).not.toHaveBeenCalled();
+    expect(runQuery).not.toHaveBeenCalled();
+
+    expect(
+      (await __handlers.exportSkillsV1Handler(ctx, request(secret), dependencies)).status,
+    ).toBe(400);
+    expect(verifyArchiveRequester).toHaveBeenCalledWith("vercel-preview-oidc", "preview");
   });
 
   it("skills export preserves pagination headers for empty filtered pages", async () => {
@@ -3326,7 +3366,7 @@ describe("httpApiV1 handlers", () => {
     expect(response.status).toBe(200);
   });
 
-  it("batches latest snapshots and tags across multiple skills", async () => {
+  it("reuses checked version selections across latest snapshots and tags", async () => {
     const selectedSkill0 = {
       _id: "skills:1",
       slug: "skill-a",
@@ -3417,16 +3457,18 @@ describe("httpApiV1 handlers", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    // Verify tags are correctly resolved for each skill
     expect(json.items[0].tags.latest).toBe("2.0.0");
     expect(json.items[0].tags.stable).toBe("1.0.0");
     expect(json.items[1].tags.latest).toBe("1.0.0");
-    // Latest snapshots and tag snapshots are batched across skills, not queried per item.
+    expect(
+      json.items.map((item: { latestVersion: { version: string } }) => item.latestVersion.version),
+    ).toEqual(["2.0.0", "1.0.0"]);
+    // Latest and tag selectors share the same bounded checked-query budget.
     const batchCalls = runQuery.mock.calls.filter(
       ([query]) => getFunctionName(query as never) === "skills:getPublicVersionSelectionsInternal",
     );
-    expect(batchCalls).toHaveLength(2);
-    expect(batchCalls.map(([, args]) => (args.selections as unknown[]).length)).toEqual([2, 3]);
+    expect(batchCalls).toHaveLength(1);
+    expect(batchCalls.map(([, args]) => (args.selections as unknown[]).length)).toEqual([3]);
   });
 
   it("lists skills supports sort aliases", async () => {
@@ -11772,6 +11814,26 @@ describe("httpApiV1 handlers", () => {
       internal.skills.getSkillBySlugInternal,
       expect.objectContaining({ slug: "demo", ownerHandle: "openclaw" }),
     );
+  });
+
+  it("stars add maps wrapped missing-skill errors to 404", async () => {
+    vi.mocked(requireApiTokenUser).mockResolvedValue({
+      userId: "users:1",
+      user: { handle: "p" },
+    } as never);
+    const error = new ConvexError("Skill not found");
+    error.message = "Uncaught ConvexError: Skill not found\n    at handler (convex/stars.ts)";
+    const runQuery = vi.fn().mockResolvedValue({ _id: "skills:1" });
+    const runMutation = vi.fn().mockResolvedValueOnce(okRate()).mockRejectedValueOnce(error);
+    const response = await __handlers.starsPostRouterV1Handler(
+      makeCtx({ runQuery, runMutation }),
+      new Request("https://example.com/api/v1/stars/demo", {
+        method: "POST",
+        headers: { Authorization: "Bearer clh_test" },
+      }),
+    );
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("Skill not found");
   });
 
   it("stars delete succeeds", async () => {
