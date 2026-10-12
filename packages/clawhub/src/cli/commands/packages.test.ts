@@ -2573,7 +2573,7 @@ describe("package commands", () => {
     }
   });
 
-  it("explains a missing npm instead of surfacing a raw ENOENT when packing a folder", async () => {
+  it.each(["ENOENT", "EACCES"])("preserves thrown npm packing errors (%s)", async (code) => {
     const workdir = await makeTmpWorkdir();
     try {
       const folder = join(workdir, "demo-plugin");
@@ -2595,8 +2595,9 @@ describe("package commands", () => {
       );
       await writeFile(join(folder, "dist", "index.js"), "export const demo = true;\n", "utf8");
 
+      const spawnError = Object.assign(new Error(`spawnSync npm ${code}`), { code });
       vi.mocked(spawnSync).mockImplementationOnce(() => ({
-        error: Object.assign(new Error("spawnSync npm ENOENT"), { code: "ENOENT" }),
+        error: spawnError,
         status: null,
         stdout: "",
         stderr: "",
@@ -2605,9 +2606,16 @@ describe("package commands", () => {
         signal: null,
       }));
 
-      await expect(
-        cmdPackPackage(makeOpts(workdir), "demo-plugin", { packDestination: "packs" }),
-      ).rejects.toThrow("npm was not found on PATH");
+      const packed = cmdPackPackage(makeOpts(workdir), "demo-plugin", { packDestination: "packs" });
+      if (code === "ENOENT") {
+        await expect(packed).rejects.toMatchObject({
+          message: expect.stringContaining("npm was not found on PATH"),
+          cause: spawnError,
+        });
+      } else {
+        await expect(packed).rejects.toBe(spawnError);
+      }
+      expect(uiMocks.fail).not.toHaveBeenCalled();
     } finally {
       await rm(workdir, { recursive: true, force: true });
     }

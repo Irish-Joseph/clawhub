@@ -899,10 +899,6 @@ function pluginInspectorFixtureId(rawName: string) {
   );
 }
 
-function isMissingExecutableError(error: unknown) {
-  return (error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
-}
-
 async function createClawPackFromFolder(options: {
   sourcePath: string;
   packDestination: string;
@@ -924,9 +920,22 @@ async function createClawPackFromFolder(options: {
     },
   );
   if (result.error) {
-    if (isMissingExecutableError(result.error)) {
-      fail(
+    if ((result.error as NodeJS.ErrnoException).code === "ENOENT") {
+      // Node also returns ENOENT for a missing cwd, even when npm exists.
+      const cwdStat = await stat(options.cwd).catch((error: unknown) => {
+        throw new Error(`Cannot access working directory "${options.cwd}": ${formatError(error)}`, {
+          cause: error,
+        });
+      });
+      if (!cwdStat.isDirectory()) {
+        throw new Error(`Working directory is not a directory: ${options.cwd}`, {
+          cause: result.error,
+        });
+      }
+      // Throw so folder publication can remove its temporary pack directory.
+      throw new Error(
         "npm was not found on PATH. Folder publishing packs the package with `npm pack`; install Node.js (which includes npm) and try again, or publish a prebuilt .tgz instead.",
+        { cause: result.error },
       );
     }
     throw result.error;
