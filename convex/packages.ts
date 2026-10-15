@@ -8,6 +8,7 @@ import {
   getPluginDiscoveryExclusion,
   INTERNAL_UNCATEGORIZED_CATEGORY,
   isPluginCategorySlug,
+  isClawCategorySlug,
   normalizeCatalogTopic,
   normalizeCatalogTopics,
   normalizePluginCategories,
@@ -59,6 +60,7 @@ import {
   appendPackageModerationEventLog,
 } from "./lib/artifactModeration";
 import { generatePackageChangelogPreview } from "./lib/changelog";
+import { classifyClawCategories } from "./lib/clawCategoryClassification";
 import { sha256Hex } from "./lib/clawpack";
 import {
   ACTIVITY_TREND_DAYS,
@@ -71,7 +73,7 @@ import {
   buildPackageInspectorValidationUrl,
 } from "./lib/emails";
 import { endorAnalysisSchema, endorAnalysisValidator } from "./lib/endorAnalysis";
-import { experimentalClawsEnabled, isClawFamilyPubliclyVisible } from "./lib/experimentalClaws";
+import { isOpenClawClawName, isOpenClawClawPublisher } from "./lib/experimentalClaws";
 import { assertFeaturedCapacity } from "./lib/featuredPolicy";
 import { requireGitHubAccountAge } from "./lib/githubAccount";
 import { normalizeGitHubRepository } from "./lib/githubActionsOidc";
@@ -112,6 +114,11 @@ import {
   resolvePackageReleaseScanStatus,
 } from "./lib/packageSecurity";
 import { insertPackageInstallStatEvent } from "./lib/packageStatEvents";
+import {
+  collectPluginApiRetirements,
+  pluginApiRetirement,
+  type PluginApiRetirement,
+} from "./lib/pluginApiRetirements";
 import {
   classifyPluginCategories,
   readPluginCategoryDocumentation,
@@ -568,6 +575,9 @@ const packageInspectorWarningInputValidator = v.object({
   issueClass: v.optional(v.string()),
   compatStatus: v.optional(v.string()),
   deprecated: v.optional(v.boolean()),
+  deprecatedApi: v.optional(v.string()),
+  replacement: v.optional(v.string()),
+  removeAfter: v.optional(v.string()),
   message: v.string(),
   evidence: v.optional(v.array(v.string())),
   authorRemediation: v.optional(
@@ -588,6 +598,9 @@ const packageInspectorFindingInputValidator = v.object({
   issueClass: v.optional(v.string()),
   compatStatus: v.optional(v.string()),
   deprecated: v.optional(v.boolean()),
+  deprecatedApi: v.optional(v.string()),
+  replacement: v.optional(v.string()),
+  removeAfter: v.optional(v.string()),
   message: v.string(),
   evidence: v.optional(v.array(v.string())),
   authorRemediation: v.optional(
@@ -613,6 +626,9 @@ type PackageInspectorFinding = {
   issueClass?: string;
   compatStatus?: string;
   deprecated?: boolean;
+  deprecatedApi?: string;
+  replacement?: string;
+  removeAfter?: string;
   message: string;
   evidence?: string[];
   authorRemediation?: PackageInspectorAuthorRemediation;
@@ -637,7 +653,7 @@ type PackageInspectorPublishResult = {
 };
 
 function hasAuthorRemediation(finding: PackageInspectorFinding) {
-  return Boolean(finding.authorRemediation?.summary);
+  return Boolean(finding.authorRemediation?.summary || pluginApiRetirement(finding));
 }
 type DbReaderCtx = Pick<QueryCtx | MutationCtx, "db">;
 const BAN_USER_PACKAGES_BATCH_SIZE = 25;
@@ -677,7 +693,6 @@ type PackagePublishAuthContext =
     };
 type PackageTrustedPublisherDoc = Doc<"packageTrustedPublishers">;
 type PackagePublishOptions = {
-  stagePrePublicationChecks?: boolean;
   requireSecurityChecks?: boolean;
   onFilesAdopted?: () => void;
 };
@@ -1100,6 +1115,7 @@ type DashboardPackageListItem = {
   ownerPublisherId?: Id<"publishers">;
   latestVersion: string | null;
   inspectorWarningCount: number;
+  apiRetirements: PluginApiRetirement[];
   topInspectorFinding?: {
     message: string;
     remediation?: string;
@@ -1432,6 +1448,34 @@ function packageArtifactSummary(
   };
 }
 
+function isClawOutsideOpenClawPublisher(digest: PackageDigestLike) {
+  return (
+    digest.family === "claw" &&
+    (!isOpenClawClawName(digest.normalizedName) ||
+      !isOpenClawClawPublisher({ kind: digest.ownerKind, handle: digest.ownerHandle }))
+  );
+}
+
+async function isClawDigestPublisherAuthorized(
+  ctx: DbReaderCtx,
+  digest: PackageDigestLike,
+  cache: Map<string, Promise<boolean>>,
+) {
+  if (digest.family !== "claw") return true;
+  if (isClawOutsideOpenClawPublisher(digest) || !digest.ownerPublisherId) return false;
+  const id = String(digest.ownerPublisherId);
+  let allowed = cache.get(id);
+  if (!allowed) {
+    allowed = ctx.db
+      .get(digest.ownerPublisherId)
+      .then(
+        async (owner) => isOpenClawClawPublisher(owner) && (await isOfficialPublisher(ctx, owner)),
+      );
+    cache.set(id, allowed);
+  }
+  return await allowed;
+}
+
 function digestMatchesFilters(
   digest: PackageDigestLike,
   args: {
@@ -1446,10 +1490,12 @@ function digestMatchesFilters(
   if (digest.softDeletedAt || !digest.latestVersion) return false;
   if (digest.channel === "private" && args.channel !== "private") return false;
   if (isPackageBlockedFromPublic(digest.scanStatus)) return false;
-  if (!isClawFamilyPubliclyVisible(digest.family)) return false;
+  if (isClawOutsideOpenClawPublisher(digest)) return false;
   if (digest.scanStatus && args.excludedScanStatuses?.includes(digest.scanStatus)) return false;
   if (args.category) {
-    if (digest.pluginCategory) {
+    if (digest.family === "claw") {
+      if (!(digest.categories ?? []).includes(args.category)) return false;
+    } else if (digest.pluginCategory) {
       if (digest.pluginCategory !== args.category) return false;
     } else if (!(digest.pluginCategoryTags ?? []).includes(args.category)) {
       return false;
@@ -1499,7 +1545,6 @@ function packageMatchesListFilters(
   if (pkg.softDeletedAt || !pkg.latestVersionSummary?.version) return false;
   if (pkg.channel === "private" && args.channel !== "private") return false;
   if (isPackageBlockedFromPublic(pkg.scanStatus)) return false;
-  if (!isClawFamilyPubliclyVisible(pkg.family)) return false;
   if (pkg.scanStatus && args.excludedScanStatuses?.includes(pkg.scanStatus)) return false;
   if (args.family && pkg.family !== args.family) return false;
   if (args.families?.length && !args.families.includes(pkg.family)) return false;
@@ -1662,6 +1707,7 @@ async function toDashboardPackageListItem(
     ownerPublisherId: pkg.ownerPublisherId,
     latestVersion: pkg.latestVersionSummary?.version ?? null,
     inspectorWarningCount: inspectorAttention.count,
+    apiRetirements: inspectorAttention.apiRetirements,
     topInspectorFinding: inspectorAttention.topFinding,
     stats: pkg.stats,
     verification: pkg.verification,
@@ -1687,19 +1733,23 @@ async function getInspectorAttentionForRelease(
   latestReleaseId?: Id<"packageReleases">,
 ): Promise<{
   count: number;
+  apiRetirements: PluginApiRetirement[];
   topFinding?: {
     message: string;
     remediation?: string;
   };
 }> {
-  if (!latestReleaseId) return { count: 0 };
+  if (!latestReleaseId) return { count: 0, apiRetirements: [] };
   const findings = await takeAuthorRemediationWarningsByRelease(ctx, latestReleaseId, 101);
-  const count = findings.length > 100 ? 100 : findings.length;
-  const top = findings[0];
-  if (!top) return { count };
+  const apiRetirements = collectPluginApiRetirements(findings);
+  const otherFindings = findings.filter((finding) => !pluginApiRetirement(finding));
+  const count = Math.min(otherFindings.length, 100);
+  const top = otherFindings[0];
+  if (!top) return { count, apiRetirements };
   const remediation = top.authorRemediation?.summary?.trim();
   return {
     count,
+    apiRetirements,
     topFinding: {
       message: top.message,
       remediation: remediation || undefined,
@@ -2662,6 +2712,7 @@ async function mayHaveVisiblePackageCategoryDigest(
   },
 ) {
   const membershipCache = new Map<string, Promise<boolean>>();
+  const clawPublisherCache = new Map<string, Promise<boolean>>();
   const digests = await (
     args.topic
       ? buildPackageTopicDigestQuery(ctx, {
@@ -2688,6 +2739,7 @@ async function mayHaveVisiblePackageCategoryDigest(
     if (typeof args.isOfficial === "boolean" && digest.isOfficial !== args.isOfficial) continue;
     if (!digestMatchesFilters(digest, args)) continue;
     if (!(await canViewerReadPackage(ctx, digest, args.viewerUserId, membershipCache))) continue;
+    if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) continue;
     return true;
   }
   // A saturated bounded probe cannot prove that later rows are also invisible.
@@ -2713,6 +2765,7 @@ async function takeVisiblePackageCategoryDigestPage(
     return { page: [], isDone: true, continueCursor: "" };
   }
   const membershipCache = new Map<string, Promise<boolean>>();
+  const clawPublisherCache = new Map<string, Promise<boolean>>();
   const scanPageSize = MAX_PUBLIC_LIST_PAGE_SIZE;
   const digests = await (
     args.topic
@@ -2744,6 +2797,7 @@ async function takeVisiblePackageCategoryDigestPage(
     if (typeof args.isOfficial === "boolean" && digest.isOfficial !== args.isOfficial) continue;
     if (!digestMatchesFilters(digest, args)) continue;
     if (!(await canViewerReadPackage(ctx, digest, args.viewerUserId, membershipCache))) continue;
+    if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) continue;
     page.push(await toPublicPackageListItem(ctx, digest));
     if (page.length >= targetCount) break;
   }
@@ -2924,6 +2978,7 @@ async function fetchHighlightedPackageEntries(
 ) {
   const viewerUserId = args.viewerUserId;
   const membershipCache = new Map<string, Promise<boolean>>();
+  const clawPublisherCache = new Map<string, Promise<boolean>>();
   const badges = ctx.db
     .query("packageBadges")
     .withIndex("by_kind_at", (q) => q.eq("kind", "highlighted"))
@@ -2939,6 +2994,7 @@ async function fetchHighlightedPackageEntries(
     if (getPluginDiscoveryExclusion(digest.categories) || !isEnglishPluginListing(digest)) continue;
     if (!(await canViewerReadPackage(ctx, digest, viewerUserId, membershipCache))) continue;
     if (!digestMatchesSearchFilters(digest, args)) continue;
+    if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) continue;
     entries.push({ digest, featuredAt: badge.at });
     if (entries.length >= MAX_PUBLIC_LIST_PAGE_SIZE) break;
   }
@@ -2983,6 +3039,15 @@ async function getPackageByNormalizedName(ctx: DbReaderCtx, normalizedName: stri
     .unique()) as Doc<"packages"> | null;
 }
 
+async function isPackageAllowedInPublicClawCatalog(ctx: DbReaderCtx, pkg: Doc<"packages">) {
+  if (pkg.family !== "claw") return true;
+  if (!isOpenClawClawName(pkg.normalizedName)) return false;
+  const ownerPublisher = pkg.ownerPublisherId ? await ctx.db.get(pkg.ownerPublisherId) : null;
+  return (
+    isOpenClawClawPublisher(ownerPublisher) && (await isOfficialPublisher(ctx, ownerPublisher))
+  );
+}
+
 async function getReadablePackageByName(
   ctx: DbReaderCtx,
   name: string,
@@ -2991,7 +3056,6 @@ async function getReadablePackageByName(
   const normalizedName = normalizePackageName(name);
   const pkg = await getPackageByNormalizedName(ctx, normalizedName);
   if (!pkg || pkg.softDeletedAt !== undefined) return null;
-  if (!isClawFamilyPubliclyVisible(pkg.family)) return null;
   if (pkg.channel === "private" || isPackageBlockedFromPublic(pkg.scanStatus)) {
     const canAccessOwner = await viewerCanAccessPackageOwner(ctx, pkg, viewerUserId);
     if (pkg.channel === "private" && !canAccessOwner) return null;
@@ -3070,7 +3134,6 @@ async function getPackageReadableForPublicTrust(
 ) {
   const pkg = await getPackageByNormalizedName(ctx, normalizePackageName(name));
   if (!pkg || pkg.softDeletedAt !== undefined) return null;
-  if (!isClawFamilyPubliclyVisible(pkg.family)) return null;
   if (pkg.channel === "private" && !(await viewerCanAccessPackageOwner(ctx, pkg, viewerUserId))) {
     return null;
   }
@@ -3269,6 +3332,9 @@ function toPublicPackageInspectorFinding(warning: Doc<"packageInspectorWarnings"
     issueClass: warning.issueClass,
     compatStatus: warning.compatStatus,
     deprecated: warning.deprecated,
+    deprecatedApi: warning.deprecatedApi,
+    replacement: warning.replacement,
+    removeAfter: warning.removeAfter,
     message: warning.message,
     evidence: warning.evidence ?? [],
     authorRemediation: warning.authorRemediation,
@@ -3318,6 +3384,7 @@ export const getPackageInspectorValidationSummaryPublic = query({
         errorCount: 0,
         warningCount: 0,
         incompatibleAfterOpenClawVersion: null,
+        apiRetirements: [],
       };
     }
 
@@ -3334,6 +3401,7 @@ export const getPackageInspectorValidationSummaryPublic = query({
       findingCount: findings.length,
       errorCount: errorFindings.length,
       warningCount: findings.length - errorFindings.length,
+      apiRetirements: collectPluginApiRetirements(findings),
       incompatibleAfterOpenClawVersion:
         errorFindings.find((finding) => finding.targetOpenClawVersion)?.targetOpenClawVersion ??
         null,
@@ -3404,7 +3472,7 @@ function authorRemediationScanLimit(limit: number) {
 }
 
 function hasStoredAuthorRemediation(warning: Doc<"packageInspectorWarnings">) {
-  return Boolean(warning.authorRemediation?.summary);
+  return Boolean(warning.authorRemediation?.summary || pluginApiRetirement(warning));
 }
 
 export const getByNameForStaff = query({
@@ -3759,7 +3827,6 @@ export const getPublicReleaseSelectionsInternal = internalQuery({
         if (
           !pkg ||
           pkg.softDeletedAt !== undefined ||
-          !isClawFamilyPubliclyVisible(pkg.family) ||
           !(await canViewerReadPackage(ctx, pkg, undefined))
         )
           return null;
@@ -4858,7 +4925,15 @@ async function listPackagePageImpl(
   if (args.families?.length && !args.highlightedOnly && args.sort !== "trending") {
     throw new Error("families is only supported for highlighted or trending package pages");
   }
-  if (args.category && !isPluginCategorySlug(args.category)) {
+  const category =
+    args.family === "claw"
+      ? args.category && (isClawCategorySlug(args.category) || args.category === "other")
+        ? args.category
+        : undefined
+      : isPluginCategorySlug(args.category)
+        ? args.category
+        : undefined;
+  if (args.category && !category) {
     return { page: [], isDone: true, continueCursor: "" };
   }
   const viewerUserId = args.viewerUserId;
@@ -4866,7 +4941,6 @@ async function listPackagePageImpl(
   const canViewPackage = async (digest: PackageDigestLike) =>
     await canViewerReadPackage(ctx, digest, viewerUserId, membershipCache);
   const targetCount = args.paginationOpts.numItems;
-  const category = isPluginCategorySlug(args.category) ? args.category : undefined;
   const topic = args.topic ? normalizeCatalogTopic(args.topic) : undefined;
   const hasCatalogMetadataFilter = Boolean(category || topic);
   if (args.topic !== undefined && !topic) {
@@ -4902,6 +4976,7 @@ async function listPackagePageImpl(
       if (getPluginDiscoveryExclusion(pkg.categories) || !isEnglishPluginListing(pkg)) continue;
       if (!(await canViewerReadPackage(ctx, pkg, viewerUserId, membershipCache))) continue;
       if (!packageMatchesListFilters(pkg, { ...args, category, topic })) continue;
+      if (!(await isPackageAllowedInPublicClawCatalog(ctx, pkg))) continue;
       page.push({
         ...(await toPublicPackageListItemFromPackage(ctx, pkg)),
         ...(currentLeaderboard &&
@@ -4936,7 +5011,13 @@ async function listPackagePageImpl(
     };
   }
 
-  if (args.officialFirst && category && typeof args.isOfficial !== "boolean") {
+  if (
+    args.officialFirst &&
+    category &&
+    args.family !== "claw" &&
+    isPluginCategorySlug(category) &&
+    typeof args.isOfficial !== "boolean"
+  ) {
     return await listOfficialFirstPackageCategoryPage(ctx, {
       ...args,
       category,
@@ -4954,11 +5035,14 @@ async function listPackagePageImpl(
     return { page, isDone: true, continueCursor: "" };
   }
 
-  if (!args.family && !experimentalClawsEnabled()) {
+  if (
+    !args.family &&
+    args.paginationOpts.cursor?.startsWith(STABLE_PACKAGE_DISCOVERY_CURSOR_PREFIX)
+  ) {
     return await listStablePackageDiscoveryPage(ctx, {
       channel: args.channel,
       isOfficial: args.isOfficial,
-      category,
+      category: isPluginCategorySlug(category) ? category : undefined,
       topic,
       excludedScanStatuses: args.excludedScanStatuses,
       sort: args.sort,
@@ -4968,6 +5052,7 @@ async function listPackagePageImpl(
   }
 
   const collected: PublicPackageListItem[] = [];
+  const clawPublisherCache = new Map<string, Promise<boolean>>();
   const family = args.family;
   const channel = args.channel;
   const isOfficial = args.isOfficial;
@@ -5053,6 +5138,8 @@ async function listPackagePageImpl(
       return ctx.db.query("packages").withIndex(indexName, (q) => q.eq("softDeletedAt", undefined));
     };
 
+    // Convex permits only one native pagination call per query. The caller follows
+    // this public cursor when hidden rows leave the filtered page short.
     if (pageOffset > 0 || !done) {
       const scanPageSize = Math.min(
         MAX_PUBLIC_LIST_PAGE_SIZE,
@@ -5069,6 +5156,7 @@ async function listPackagePageImpl(
         const pkg = page.page[index];
         if (!(await canViewerReadPackage(ctx, pkg, viewerUserId, membershipCache))) continue;
         if (!packageMatchesListFilters(pkg, { ...args, category, topic })) continue;
+        if (!(await isPackageAllowedInPublicClawCatalog(ctx, pkg))) continue;
         collected.push(await toPublicPackageListItemFromPackage(ctx, pkg));
         if (collected.length >= targetCount) {
           const nextOffset = index + 1;
@@ -5127,7 +5215,7 @@ async function listPackagePageImpl(
           isOfficial,
           sort: effectiveDigestSort,
         })
-      : category
+      : category && family !== "claw" && isPluginCategorySlug(category)
         ? buildPackagePluginCategoryDigestQuery(ctx, {
             category,
             family,
@@ -5144,29 +5232,18 @@ async function listPackagePageImpl(
   let pageOffset = offset;
   let pageSize: number | null = decodedCursor.pageSize ?? null;
   let done = decodedCursor.done;
-  const requiresDigestPostFilterScan =
-    hasCatalogMetadataFilter || Boolean(args.excludedScanStatuses?.length);
-  let digestScanPages = 0;
-  let remainingDigestScanBudget = requiresDigestPostFilterScan
-    ? MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS
-    : MAX_PUBLIC_LIST_PAGE_SIZE;
 
-  if (
-    (pageOffset > 0 || !done) &&
-    collected.length < targetCount &&
-    digestScanPages < MAX_PUBLIC_LIST_FILTER_SCAN_PAGES &&
-    remainingDigestScanBudget > 0
-  ) {
+  // A short filtered page carries its raw continuation for another query call.
+  if ((pageOffset > 0 || !done) && collected.length < targetCount) {
     const scanPageSize = Math.min(
-      remainingDigestScanBudget,
       MAX_PUBLIC_LIST_PAGE_SIZE,
       pageOffset > 0 && pageSize
         ? Math.max(pageSize, pageOffset + targetCount)
-        : Math.max(effectivePageSize, targetCount),
+        : family === "claw"
+          ? MAX_PUBLIC_LIST_PAGE_SIZE
+          : Math.max(effectivePageSize, targetCount),
     );
     if (scanPageSize > 0) {
-      digestScanPages += 1;
-      remainingDigestScanBudget -= scanPageSize;
       const currentCursor = cursor;
       const page: {
         page: PackageDigestLike[];
@@ -5184,6 +5261,7 @@ async function listPackagePageImpl(
         if (typeof isOfficial === "boolean" && digest.isOfficial !== isOfficial) {
           continue;
         }
+        if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) continue;
         if (!digestMatchesFilters(digest, { ...args, category, topic })) continue;
         collected.push(await toPublicPackageListItem(ctx, digest));
         if (collected.length >= targetCount) {
@@ -5477,14 +5555,23 @@ async function searchPackagesImpl(
 ) {
   const queryText = args.query.trim().toLowerCase();
   if (!queryText) return [];
-  if (args.category && !isPluginCategorySlug(args.category)) return [];
+  const category =
+    args.family === "claw"
+      ? args.category && (isClawCategorySlug(args.category) || args.category === "other")
+        ? args.category
+        : undefined
+      : isPluginCategorySlug(args.category)
+        ? args.category
+        : undefined;
+  if (args.category && !category) return [];
   if (args.channel === "private" && !args.viewerUserId) return [];
   const targetCount = Math.max(1, Math.min(args.limit ?? 20, 100));
   const viewerUserId = args.viewerUserId;
   const membershipCache = new Map<string, Promise<boolean>>();
+  const clawPublisherCache = new Map<string, Promise<boolean>>();
+  let skippedPolicyClaw = false;
   const canViewPackage = async (digest: PackageDigestLike) =>
     await canViewerReadPackage(ctx, digest, viewerUserId, membershipCache);
-  const category = isPluginCategorySlug(args.category) ? args.category : undefined;
   const topic = args.topic ? normalizeCatalogTopic(args.topic) : undefined;
   if (args.topic !== undefined && !topic) return [];
   const publicItem = (digest: PackageDigestLike, featuredAt?: number) => {
@@ -5503,7 +5590,7 @@ async function searchPackagesImpl(
       topic,
     });
     const entries = highlightedEntries
-      .filter(({ digest }) => isClawFamilyPubliclyVisible(digest.family))
+      .filter(({ digest }) => digestMatchesFilters(digest, { ...args, category, topic }))
       .filter(({ digest }) =>
         args.createdAfter === undefined ? true : digest.createdAt >= args.createdAfter,
       )
@@ -5536,10 +5623,7 @@ async function searchPackagesImpl(
     return results;
   }
 
-  const searchFamilies =
-    !args.family && !experimentalClawsEnabled()
-      ? ([...STABLE_PACKAGE_FAMILIES] as PackageFamily[])
-      : [args.family];
+  const searchFamilies = [args.family];
   const buildSearchDigestQuery = (
     family: PackageFamily | undefined,
     isOfficial = args.isOfficial,
@@ -5551,7 +5635,7 @@ async function searchPackagesImpl(
           channel: args.channel,
           isOfficial,
         })
-      : category
+      : category && family !== "claw" && isPluginCategorySlug(category)
         ? buildPackagePluginCategoryDigestQuery(ctx, {
             category,
             family,
@@ -5585,7 +5669,7 @@ async function searchPackagesImpl(
   const [highlightedEntries, officialDigestGroups, directDigests] = await Promise.all([
     highlighted,
     official,
-    category && !topic
+    category && !topic && args.family !== "claw"
       ? Promise.resolve([])
       : Promise.all(
           searchFamilies.map(
@@ -5606,6 +5690,10 @@ async function searchPackagesImpl(
   for (const digest of candidateDigests) {
     if (!(await canViewPackage(digest))) continue;
     if (!digestMatchesSearchFilters(digest, { ...args, topic })) continue;
+    if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) {
+      skippedPolicyClaw = true;
+      continue;
+    }
     const match = packageSearchMatch(digest, queryText);
     if (!match || seen.has(digest.packageId)) continue;
     seen.add(digest.packageId);
@@ -5623,11 +5711,21 @@ async function searchPackagesImpl(
       .length;
 
   if (authoritativeMatchCount() < targetCount) {
-    const scanLimit = Math.min(MAX_SEARCH_PAGE_SIZE, Math.max(targetCount * 5, 50));
+    const requiresWideScan =
+      args.family === "claw" ||
+      (topic !== undefined && category !== undefined) ||
+      args.createdAfter !== undefined;
+    const scanLimit = requiresWideScan
+      ? Math.floor(MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS / searchFamilies.length)
+      : Math.min(MAX_SEARCH_PAGE_SIZE, Math.max(targetCount * 5, 50));
     const collectDigestMatches = async (digests: PackageDigestLike[]) => {
       for (const digest of digests) {
         if (!(await canViewPackage(digest))) continue;
         if (!digestMatchesSearchFilters(digest, { ...args, topic })) continue;
+        if (!(await isClawDigestPublisherAuthorized(ctx, digest, clawPublisherCache))) {
+          skippedPolicyClaw = true;
+          continue;
+        }
         const match = packageSearchMatch(digest, queryText);
         if (!match || seen.has(digest.packageId)) continue;
         seen.add(digest.packageId);
@@ -5638,59 +5736,39 @@ async function searchPackagesImpl(
       }
     };
 
-    if ((topic && category) || args.createdAfter !== undefined) {
-      const scanStates = searchFamilies.map((family) => ({
-        family,
-        cursor: null as string | null,
-        isDone: false,
-        pagesScanned: 0,
-      }));
-      let remainingScanBudget = MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS;
-      while (
-        authoritativeMatchCount() < targetCount &&
-        scanStates.some(
-          (state) => !state.isDone && state.pagesScanned < MAX_PUBLIC_LIST_FILTER_SCAN_PAGES,
-        ) &&
-        remainingScanBudget > 0
-      ) {
-        // Finish each round before checking the match quota so the fixed family
-        // order cannot decide global relevance or consume another family's cap.
-        for (const state of scanStates) {
-          if (
-            state.isDone ||
-            state.pagesScanned >= MAX_PUBLIC_LIST_FILTER_SCAN_PAGES ||
-            remainingScanBudget <= 0
-          ) {
-            continue;
-          }
-          const pageSize = Math.min(scanLimit, remainingScanBudget);
-          const page: {
-            page: PackageDigestLike[];
-            isDone: boolean;
-            continueCursor: string;
-          } = await buildSearchDigestQuery(state.family)
-            .order("desc")
-            .paginate({ cursor: state.cursor, numItems: pageSize });
-          state.pagesScanned += 1;
-          remainingScanBudget -= pageSize;
-          await collectDigestMatches(page.page);
-          state.cursor = page.continueCursor;
-          state.isDone = page.isDone;
-        }
-      }
-    } else {
-      const fallback =
-        batchReads?.fallback ??
-        Promise.all(
-          searchFamilies.map(
-            async (family) =>
-              (await buildSearchDigestQuery(family)
-                .order("desc")
-                .take(scanLimit)) as PackageDigestLike[],
-          ),
-        ).then((groups) => groups.flat());
-      if (batchReads) batchReads.fallback = fallback;
-      await collectDigestMatches(await fallback);
+    // Search is a ranked, non-paginated result. A bounded take keeps the full
+    // candidate window in one Convex query, including hidden legacy Claws.
+    const fallback =
+      batchReads?.fallback ??
+      Promise.all(
+        searchFamilies.map(
+          async (family) =>
+            (await buildSearchDigestQuery(family)
+              .order("desc")
+              .take(scanLimit)) as PackageDigestLike[],
+        ),
+      ).then((groups) => groups.flat());
+    if (batchReads) batchReads.fallback = fallback;
+    const fallbackDigests = await fallback;
+    await collectDigestMatches(fallbackDigests);
+    if (
+      !args.family &&
+      (fallbackDigests.some(isClawOutsideOpenClawPublisher) || skippedPolicyClaw) &&
+      authoritativeMatchCount() < targetCount
+    ) {
+      // Hidden Claws may exhaust the shared candidate window before any stable
+      // package appears. Give each family its own bounded recovery window.
+      const recoveryGroups = await Promise.all(
+        [...STABLE_PACKAGE_FAMILIES, "claw" as const].map(
+          async (family) =>
+            (await buildSearchDigestQuery(family)
+              .order("desc")
+              .take(
+                family === "claw" ? MAX_PUBLIC_LIST_FILTER_SCAN_DOCUMENTS : scanLimit,
+              )) as PackageDigestLike[],
+        ),
+      );
+      await collectDigestMatches(recoveryGroups.flat());
     }
   }
 
@@ -9076,9 +9154,6 @@ async function publishPackageImpl(
     rawPayload,
     "Package publish payload",
   );
-  if (payload.family === "claw" && !experimentalClawsEnabled()) {
-    throw new ConvexError("Experimental Claw publication is disabled");
-  }
   if (payload.family === "skill") {
     throw new ConvexError("Skill packages must use the skills publish flow");
   }
@@ -9221,6 +9296,19 @@ async function publishPackageImpl(
     publishActor = { kind: "user", userId: actorUserId };
   }
 
+  if (family === "claw" && ownerPublisherId) {
+    const ownerPublisher = await runQueryRef<Doc<"publishers"> | null>(
+      ctx,
+      internalRefs.publishers.getByIdInternal,
+      { publisherId: ownerPublisherId },
+    );
+    if (!ownerPublisher || ownerPublisher.deletedAt || ownerPublisher.deactivatedAt) {
+      throw new ConvexError("Claw package owner publisher is unavailable");
+    }
+    const ownerMismatch = getPackageScopeOwnerMismatch(name, ownerPublisher.handle);
+    if (ownerMismatch) throw new ConvexError(ownerMismatch.message);
+  }
+
   const displayName = payload.displayName?.trim() || name;
   const { files, legacyZipEntries } = await verifyPublishFileStorageMetadata(
     ctx,
@@ -9249,22 +9337,20 @@ async function publishPackageImpl(
   );
   const publishedArtifactSha256 = family === "claw" ? payload.artifact?.sha256 : undefined;
   const attemptArtifactFingerprint = publishedArtifactSha256 ?? integritySha256;
-  if (options.stagePrePublicationChecks) {
-    // Settle retries before the scans, Plugin Inspector, and classification run again.
-    const settled = await settleExistingStagedPackagePublication(ctx, {
-      auth,
-      existingPackage,
-      family,
-      name,
-      version,
-      actorUserId,
-      ownerUserId,
-      ownerPublisherId,
-      artifactFingerprint: attemptArtifactFingerprint,
-      publishedArtifactSha256,
-    });
-    if (settled) return settled;
-  }
+  // Settle retries before the scans, Plugin Inspector, and classification run again.
+  const settled = await settleExistingStagedPackagePublication(ctx, {
+    auth,
+    existingPackage,
+    family,
+    name,
+    version,
+    actorUserId,
+    ownerUserId,
+    ownerPublisherId,
+    artifactFingerprint: attemptArtifactFingerprint,
+    publishedArtifactSha256,
+  });
+  if (settled) return settled;
   const legacyZipBytes = buildDeterministicPackageZip(legacyZipEntries);
   const legacyZipSha256 = await sha256Hex(legacyZipBytes);
 
@@ -9478,6 +9564,13 @@ async function publishPackageImpl(
       });
       categories = assignment.categories;
       categoryClassification = assignment.classification;
+    } else if (family === "claw") {
+      if (!validatedClaw) throw new Error("Claw package must be validated before classification");
+      categories = await classifyClawCategories({
+        name,
+        manifest: validatedClaw.manifest,
+        documentation: clawManifestEntry?.text,
+      });
     } else {
       const declaredCategories =
         payload.categories ?? normalizeStoredPluginCategoryOverride(existingPackage?.categories);
@@ -9649,229 +9742,125 @@ async function publishPackageImpl(
       toPackageInspectorPublishResponseFinding(finding, inspectorResult.metadata),
     ) ?? [];
 
-  if (options.stagePrePublicationChecks) {
-    await reverifyOpenClawAuthorizationBeforePublish(auth, {
-      name,
-      version,
-      inventoryDigest,
-    });
-    const pendingResult = await insertReleaseOwningLegacyZip(() =>
-      runMutationRef<{
-        ok: true;
-        packageId: Id<"packages">;
-        releaseId: Id<"packageReleases">;
-        publicationStatus?: "pending" | "published";
-        createdNewParent?: boolean;
-      }>(ctx, internalRefs.packages.insertReleaseInternal, {
-        ...packageInsertArgs,
-        publicationStatus: "pending",
-      }),
-    );
-
-    const staged = await runMutationRef<{
-      attemptId: Id<"publishAttempts">;
-      status: string;
-      result?: { ok: true; packageId: Id<"packages">; releaseId: Id<"packageReleases"> };
-    }>(ctx, internalRefs.publishAttempts.createPackagePublishAttemptInternal, {
-      userId: actorUserId,
-      ownerUserId,
-      ownerPublisherId,
-      packageId: pendingResult.packageId,
-      packageReleaseId: pendingResult.releaseId,
-      createdNewParent: pendingResult.createdNewParent,
-      name,
-      displayName,
-      version,
-      idempotencyKey: buildPackagePublishAttemptIdempotencyKey({
-        actorUserId,
-        ownerPublisherId,
-        ownerUserId,
-        name,
-        version,
-        artifactFingerprint: attemptArtifactFingerprint,
-      }),
-      artifactFingerprint: attemptArtifactFingerprint,
-      files,
-      clawpackStorageId: packageInsertArgs.clawpackStorageId,
-      scanContext: buildPackagePublishAttemptScanContext(packageInsertArgs),
-      packageFollowup: stripUndefinedForStoredAttempt({
-        ownerUserId,
-        ownerPublisherId,
-        packageName: name,
-        version,
-        inspectorWarnings: inspectorResult?.warnings ?? [],
-        inspectorMetadata: inspectorResult?.metadata,
-        trustedPublishTokenId: auth.kind === "github-actions" ? auth.publishToken._id : undefined,
-        trustedPublishInventoryDigest: auth.kind === "github-actions" ? inventoryDigest : undefined,
-        trustedPublishAuthorizationVersion:
-          auth.kind === "github-actions" ? auth.publishToken.authorizationVersion : undefined,
-        manualOverrideAudit:
-          auth.kind === "user" && existingTrustedPublisher && manualOverrideReason
-            ? {
-                actorUserId,
-                version,
-                reason: manualOverrideReason,
-                trustedPublisher: {
-                  provider: existingTrustedPublisher.provider,
-                  repository: existingTrustedPublisher.repository,
-                  workflowFilename: existingTrustedPublisher.workflowFilename,
-                  environment: existingTrustedPublisher.environment,
-                },
-              }
-            : undefined,
-        githubActionsAudit:
-          auth.kind === "github-actions"
-            ? {
-                actorUserId,
-                version,
-                repository: auth.publishToken.repository,
-                workflowFilename: auth.publishToken.workflowFilename,
-                environment: auth.publishToken.environment,
-                runId: auth.publishToken.runId,
-                runAttempt: auth.publishToken.runAttempt,
-                sha: auth.publishToken.sha,
-              }
-            : undefined,
-      }),
-    }).catch(async (error) => {
-      await runMutationRef(ctx, internalRefs.packages.discardPendingPackagePublicationInternal, {
-        packageId: pendingResult.packageId,
-        releaseId: pendingResult.releaseId,
-        createdNewParent: pendingResult.createdNewParent,
-      });
-      throw error;
-    });
-    if (auth.kind === "github-actions" && auth.publishToken.authorizationVersion !== 2) {
-      await runMutationRef(ctx, internalRefs.packagePublishTokens.revokeInternal, {
-        tokenId: auth.publishToken._id,
-      });
-    }
-    if (staged.status === "finalized" && staged.result) {
-      const finalizedResult = {
-        ...staged.result,
-        publicationStatus: "published" as const,
-        ...(publishedArtifactSha256 ? { artifactSha256: publishedArtifactSha256 } : {}),
-      };
-      return inspectorFindings.length > 0
-        ? { ...finalizedResult, inspectorFindings }
-        : finalizedResult;
-    }
-
-    return {
-      ok: true as const,
-      status: "pending" as const,
-      packageId: pendingResult.packageId,
-      releaseId: pendingResult.releaseId,
-      ...(publishedArtifactSha256 ? { artifactSha256: publishedArtifactSha256 } : {}),
-      publicationStatus: "pending" as const,
-      attemptId: staged.attemptId,
-      packageName: name,
-      version,
-      ...(inspectorFindings.length > 0 ? { inspectorFindings } : {}),
-    };
-  }
-
   await reverifyOpenClawAuthorizationBeforePublish(auth, {
     name,
     version,
     inventoryDigest,
   });
-  const publishResult = await insertReleaseOwningLegacyZip(() =>
+  const pendingResult = await insertReleaseOwningLegacyZip(() =>
     runMutationRef<{
       ok: true;
       packageId: Id<"packages">;
       releaseId: Id<"packageReleases">;
-    }>(ctx, internalRefs.packages.insertReleaseInternal, packageInsertArgs),
+      publicationStatus?: "pending" | "published";
+      createdNewParent?: boolean;
+    }>(ctx, internalRefs.packages.insertReleaseInternal, {
+      ...packageInsertArgs,
+      publicationStatus: "pending",
+    }),
   );
-  if (inspectorResult?.warnings.length) {
-    const insertFindingsResult = await runMutationRef<{
-      ok: true;
-      inserted: number;
-      shouldEmailOwner: boolean;
-    }>(ctx, internalRefs.packages.insertPackageInspectorWarningsInternal, {
-      packageId: publishResult.packageId,
-      releaseId: publishResult.releaseId,
+
+  const staged = await runMutationRef<{
+    attemptId: Id<"publishAttempts">;
+    status: string;
+    result?: { ok: true; packageId: Id<"packages">; releaseId: Id<"packageReleases"> };
+  }>(ctx, internalRefs.publishAttempts.createPackagePublishAttemptInternal, {
+    userId: actorUserId,
+    ownerUserId,
+    ownerPublisherId,
+    packageId: pendingResult.packageId,
+    packageReleaseId: pendingResult.releaseId,
+    createdNewParent: pendingResult.createdNewParent,
+    name,
+    displayName,
+    version,
+    idempotencyKey: buildPackagePublishAttemptIdempotencyKey({
+      actorUserId,
+      ownerPublisherId,
+      ownerUserId,
+      name,
+      version,
+      artifactFingerprint: attemptArtifactFingerprint,
+    }),
+    artifactFingerprint: attemptArtifactFingerprint,
+    files,
+    clawpackStorageId: packageInsertArgs.clawpackStorageId,
+    scanContext: buildPackagePublishAttemptScanContext(packageInsertArgs),
+    packageFollowup: stripUndefinedForStoredAttempt({
       ownerUserId,
       ownerPublisherId,
       packageName: name,
       version,
-      scanSource: "publish",
-      inspectorVersion: inspectorResult.metadata?.inspectorVersion,
-      targetOpenClawVersion: inspectorResult.metadata?.targetOpenClawVersion,
-      findings: inspectorResult.warnings,
+      inspectorWarnings: inspectorResult?.warnings ?? [],
+      inspectorMetadata: inspectorResult?.metadata,
+      trustedPublishTokenId: auth.kind === "github-actions" ? auth.publishToken._id : undefined,
+      trustedPublishInventoryDigest: auth.kind === "github-actions" ? inventoryDigest : undefined,
+      trustedPublishAuthorizationVersion:
+        auth.kind === "github-actions" ? auth.publishToken.authorizationVersion : undefined,
+      manualOverrideAudit:
+        auth.kind === "user" && existingTrustedPublisher && manualOverrideReason
+          ? {
+              actorUserId,
+              version,
+              reason: manualOverrideReason,
+              trustedPublisher: {
+                provider: existingTrustedPublisher.provider,
+                repository: existingTrustedPublisher.repository,
+                workflowFilename: existingTrustedPublisher.workflowFilename,
+                environment: existingTrustedPublisher.environment,
+              },
+            }
+          : undefined,
+      githubActionsAudit:
+        auth.kind === "github-actions"
+          ? {
+              actorUserId,
+              version,
+              repository: auth.publishToken.repository,
+              workflowFilename: auth.publishToken.workflowFilename,
+              environment: auth.publishToken.environment,
+              runId: auth.publishToken.runId,
+              runAttempt: auth.publishToken.runAttempt,
+              sha: auth.publishToken.sha,
+            }
+          : undefined,
+    }),
+  }).catch(async (error) => {
+    await runMutationRef(ctx, internalRefs.packages.discardPendingPackagePublicationInternal, {
+      packageId: pendingResult.packageId,
+      releaseId: pendingResult.releaseId,
+      createdNewParent: pendingResult.createdNewParent,
     });
-    if (insertFindingsResult.shouldEmailOwner) {
-      try {
-        await runActionRef(ctx, internalRefs.packages.sendPackageInspectorFindingsEmailInternal, {
-          packageId: publishResult.packageId,
-          releaseId: publishResult.releaseId,
-        });
-      } catch (error) {
-        console.error("Package Inspector findings email failed", error);
-      }
-    }
-  }
-
+    throw error;
+  });
   if (auth.kind === "github-actions" && auth.publishToken.authorizationVersion !== 2) {
     await runMutationRef(ctx, internalRefs.packagePublishTokens.revokeInternal, {
       tokenId: auth.publishToken._id,
     });
   }
-  if (auth.kind === "user" && existingTrustedPublisher && manualOverrideReason) {
-    await runMutationRef(ctx, internalRefs.packages.insertAuditLogInternal, {
-      actorUserId,
-      action: "package.publish.manual_override",
-      targetType: "package",
-      targetId: String(publishResult.packageId),
-      metadata: {
-        version,
-        reason: manualOverrideReason,
-        trustedPublisher: {
-          provider: existingTrustedPublisher.provider,
-          repository: existingTrustedPublisher.repository,
-          workflowFilename: existingTrustedPublisher.workflowFilename,
-          environment: existingTrustedPublisher.environment,
-        },
-      },
-    });
-  }
-  if (auth.kind === "github-actions") {
-    await runMutationRef(ctx, internalRefs.packages.insertAuditLogInternal, {
-      actorUserId,
-      action: "package.publish.github_actions",
-      targetType: "package",
-      targetId: String(publishResult.packageId),
-      metadata: {
-        version,
-        repository: auth.publishToken.repository,
-        workflowFilename: auth.publishToken.workflowFilename,
-        environment: auth.publishToken.environment,
-        runId: auth.publishToken.runId,
-        runAttempt: auth.publishToken.runAttempt,
-        sha: auth.publishToken.sha,
-      },
-    });
+  if (staged.status === "finalized" && staged.result) {
+    const finalizedResult = {
+      ...staged.result,
+      publicationStatus: "published" as const,
+      ...(publishedArtifactSha256 ? { artifactSha256: publishedArtifactSha256 } : {}),
+    };
+    return inspectorFindings.length > 0
+      ? { ...finalizedResult, inspectorFindings }
+      : finalizedResult;
   }
 
-  await runAfterRef(
-    ctx,
-    INITIAL_PACKAGE_VT_SCAN_DELAY_MS,
-    internalRefs.vt.scanPackageReleaseWithVirusTotal,
-    {
-      releaseId: publishResult.releaseId,
-    },
-  );
-  await runMutationRef(ctx, internalRefs.securityScan.enqueuePackageReleaseScanInternal, {
-    releaseId: publishResult.releaseId,
-    source: "publish",
-  });
-
-  const publishedResult = {
-    ...publishResult,
-    publicationStatus: "published" as const,
+  return {
+    ok: true as const,
+    status: "pending" as const,
+    packageId: pendingResult.packageId,
+    releaseId: pendingResult.releaseId,
     ...(publishedArtifactSha256 ? { artifactSha256: publishedArtifactSha256 } : {}),
+    publicationStatus: "pending" as const,
+    attemptId: staged.attemptId,
+    packageName: name,
+    version,
+    ...(inspectorFindings.length > 0 ? { inspectorFindings } : {}),
   };
-  return inspectorFindings.length > 0 ? { ...publishedResult, inspectorFindings } : publishedResult;
 }
 
 type ExistingPackagePublishAttempt = {
@@ -10077,8 +10066,6 @@ export const publishPackageForUserInternal = internalAction({
   handler: async (ctx, args) => {
     return await withRequestPackageStorage(ctx, args.requestStorageIds, (onFilesAdopted) =>
       publishPackageImpl(ctx, { kind: "user", actorUserId: args.actorUserId }, args.payload, {
-        stagePrePublicationChecks:
-          args.requireSecurityChecks || stagedPrePublicationPublishesEnabled(),
         requireSecurityChecks: args.requireSecurityChecks,
         onFilesAdopted,
       }),
@@ -10100,16 +10087,9 @@ export const publishRelease: ReturnType<typeof action> = action({
       throw new ConvexError("Claw packages must use the exact-artifact HTTP publish flow");
     }
     const { userId } = await requireUserFromAction(ctx);
-    const stagePrePublicationChecks = stagedPrePublicationPublishesEnabled();
-    return await publishPackageImpl(ctx, { kind: "user", actorUserId: userId }, args.payload, {
-      stagePrePublicationChecks,
-    });
+    return await publishPackageImpl(ctx, { kind: "user", actorUserId: userId }, args.payload);
   },
 });
-
-function stagedPrePublicationPublishesEnabled() {
-  return process.env.CLAWHUB_STAGED_PREPUBLICATION_PUBLISHES === "1";
-}
 
 export const finalizePackagePublishAttemptInternal = internalAction({
   args: {
@@ -10286,8 +10266,6 @@ export const publishPackageForTrustedPublisherInternal = internalAction({
       }
       return await publishPackageImpl(ctx, { kind: "github-actions", publishToken }, args.payload, {
         onFilesAdopted,
-        stagePrePublicationChecks:
-          publishToken.authorizationVersion === 2 || stagedPrePublicationPublishesEnabled(),
       });
     });
   },
@@ -11140,6 +11118,9 @@ async function insertPackageInspectorFindings(
       issueClass: warning.issueClass,
       compatStatus: warning.compatStatus,
       deprecated: warning.deprecated,
+      deprecatedApi: warning.deprecatedApi,
+      replacement: warning.replacement,
+      removeAfter: warning.removeAfter,
       message: warning.message,
       evidence: warning.evidence,
       authorRemediation: warning.authorRemediation,
@@ -12098,6 +12079,15 @@ export const publishPendingReleaseInternal = internalMutation({
     const firstPublishedRelease = hasNoPublishedPackageVersions(pkg);
     const pendingFamily = stringPendingField(metadata, "family", pkg.family) as PackageFamily;
     const packageFamily = firstPublishedRelease ? pendingFamily : pkg.family;
+    // Legacy user-owned Claws may not have a publisher row; keep their existing path.
+    if (packageFamily === "claw" && pkg.ownerPublisherId) {
+      const ownerPublisher = await ctx.db.get(pkg.ownerPublisherId);
+      if (!ownerPublisher || ownerPublisher.deletedAt || ownerPublisher.deactivatedAt) {
+        throw new ConvexError("Claw package owner publisher is unavailable");
+      }
+      const ownerMismatch = getPackageScopeOwnerMismatch(pkg.normalizedName, ownerPublisher.handle);
+      if (ownerMismatch) throw new ConvexError(ownerMismatch.message);
+    }
     const currentLatest = await resolvePackageCurrentLatestForPublish(ctx, pkg);
     const { effectiveTags, shouldPromoteLatest } = resolvePackageReleaseTagsForPublish({
       family: packageFamily,
@@ -12275,9 +12265,6 @@ export const insertReleaseInternal = internalMutation({
     trustedPublishInventoryDigest: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.family === "claw" && !experimentalClawsEnabled()) {
-      throw new ConvexError("Experimental Claw publication is disabled");
-    }
     const now = Date.now();
     const publicationStatus = args.publicationStatus ?? "published";
     const pendingPublication = publicationStatus === "pending";
@@ -12348,6 +12335,10 @@ export const insertReleaseInternal = internalMutation({
       (!ownerPublisher || ownerPublisher.deletedAt || ownerPublisher.deactivatedAt)
     ) {
       throw new ConvexError("Package owner publisher is unavailable");
+    }
+    if (args.family === "claw" && ownerPublisher) {
+      const ownerMismatch = getPackageScopeOwnerMismatch(normalizedName, ownerPublisher.handle);
+      if (ownerMismatch) throw new ConvexError(ownerMismatch.message);
     }
     if (ownerPublisher?.kind === "user" && ownerPublisher.linkedUserId) {
       const linkedPublisherUser = await ctx.db.get(ownerPublisher.linkedUserId);

@@ -2062,6 +2062,9 @@ const packageInspectorWarnings = defineTable({
   issueClass: v.optional(v.string()),
   compatStatus: v.optional(v.string()),
   deprecated: v.optional(v.boolean()),
+  deprecatedApi: v.optional(v.string()),
+  replacement: v.optional(v.string()),
+  removeAfter: v.optional(v.string()),
   message: v.string(),
   evidence: v.optional(v.array(v.string())),
   authorRemediation: v.optional(
@@ -3241,6 +3244,9 @@ const catalogFeedPublications = defineTable({
   payload: v.string(),
   payloadSha256: v.string(),
   publishedAt: v.number(),
+  clawPolicyVersion: v.optional(v.literal(1)),
+  clawEntryCount: v.optional(v.number()),
+  clawPublisherId: v.optional(v.id("publishers")),
 }).index("by_feed", ["feedId"]);
 
 const stars = defineTable({

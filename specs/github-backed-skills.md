@@ -451,6 +451,16 @@ After a new `NVIDIA/skills` version reaches a completed `clean` or `suspicious`
 security verdict, ClawHub may enqueue that exact commit, path, and content hash
 for a pinned SkillEvaluator Tier 3 run. Evaluation is asynchronous and never
 blocks promotion or installation. Unchanged syncs do not enqueue another run.
+Legacy catalog skills inherit the repository from their GitHub source when no
+per-skill repository is stored; verification must still enqueue those skills.
+
+The worker pins SkillEvaluator v0.5.0 and its release commit. After changing the
+configuration, the admin backfill creates new configuration-specific jobs while
+preserving prior outcomes. Its optional `sourcePaths` selection limits a canary
+to 1–20 exact paths across every page; omitting it selects the full eligible
+catalog. Repeating the backfill does not duplicate already-observed jobs.
+Four GitHub worker lanes claim jobs independently, with one active job per lane
+across workflow dispatches. One failed lane does not cancel the others.
 
 Public evaluation maintenance mutations, including targeted prioritization and
 backfill scheduling, require an active admin before reading or changing queues.
@@ -472,6 +482,13 @@ pinned subject/judge models, required OpenAI endpoints, a bounded request count,
 disabled provider-side background work, and the lifetime of that one run.
 SkillEvaluator still runs the agent in its secure Docker mode; the capability
 is closed when the evaluator exits.
+SkillEvaluator uses its `openai-compatible` gateway adapter so Codex selects a
+custom HTTP Responses provider instead of trying the native OpenAI WebSocket
+transport against the HTTP broker.
+For GPT-5 Chat Completions, the broker translates the legacy `max_tokens` field
+emitted for proxy URLs into OpenAI's `max_completion_tokens`, preserving its
+value. Native execution errors take precedence over rendered command output;
+fallback diagnostics redact both streams before retaining their bounded tails.
 
 ## UI
 

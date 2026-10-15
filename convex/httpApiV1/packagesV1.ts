@@ -28,6 +28,7 @@ import {
   formatSecurityAuditOverview,
   aggregateAuditVerdict,
   normalizeContentType,
+  isClawCategorySlug,
   isPluginCategorySlug,
   parseArk,
   type ApiV1PackageCategoriesBatchRequest,
@@ -50,7 +51,6 @@ import { getOptionalActiveAuthUserIdFromAction } from "../lib/access";
 import { getOptionalApiTokenUserId, requireApiTokenUser } from "../lib/apiTokenAuth";
 import { recordCatalogSearchObservation } from "../lib/catalogSearchObservations";
 import { parseClawPack, sha256Base64, sha256Hex } from "../lib/clawpack";
-import { experimentalClawsEnabled } from "../lib/experimentalClaws";
 import {
   fetchGitHubRepositoryIdentity,
   verifyGitHubActionsTrustedPublishJwt,
@@ -344,12 +344,7 @@ async function getOptionalViewerUserIdForRequest(ctx: ActionCtx, request: Reques
   }
 }
 
-const PACKAGE_FAMILY_VALUES = ["skill", "code-plugin", "bundle-plugin"] as const;
-const PACKAGE_FAMILY_VALUES_WITH_CLAWS = [...PACKAGE_FAMILY_VALUES, "claw"] as const;
-
-function publicPackageFamilyValues() {
-  return experimentalClawsEnabled() ? PACKAGE_FAMILY_VALUES_WITH_CLAWS : PACKAGE_FAMILY_VALUES;
-}
+const PACKAGE_FAMILY_VALUES = ["skill", "code-plugin", "bundle-plugin", "claw"] as const;
 const PLUGIN_EXPORT_FAMILY_VALUES = ["code-plugin", "bundle-plugin"] as const;
 const PACKAGE_CHANNEL_VALUES = ["official", "community", "private"] as const;
 const PACKAGE_LIST_SORT_VALUES = [
@@ -386,6 +381,12 @@ function resolvePluginCategoryFilter(value: string | undefined): PluginCategoryS
   return LEGACY_PLUGIN_CATEGORY_FILTER_ALIASES[
     value as keyof typeof LEGACY_PLUGIN_CATEGORY_FILTER_ALIASES
   ];
+}
+
+function resolvePackageCategoryFilter(value: string | undefined, family: string | undefined) {
+  if (!value) return undefined;
+  if (family === "claw") return value === "other" || isClawCategorySlug(value) ? value : undefined;
+  return resolvePluginCategoryFilter(value);
 }
 
 function parseExcludedScanStatuses(value: string | null) {
@@ -1641,10 +1642,6 @@ async function parseMultipartPackagePublish(
     parsedPayload,
     "Package publish payload",
   );
-  if (metadata.family === "claw" && !experimentalClawsEnabled()) {
-    throw new Error("Experimental Claw publication is disabled");
-  }
-
   const tarballPart = getTarballPart(form);
   const fileParts = getFileParts(
     form,
@@ -1740,7 +1737,7 @@ async function listPackages(
   const viewerUserId = await getOptionalViewerUserIdForRequest(ctx, request);
   const limit = Math.max(1, Math.min(toOptionalNumber(url.searchParams.get("limit")) ?? 25, 100));
   const rawCursor = url.searchParams.get("cursor");
-  const familyParam = parseEnumQueryParam(url.searchParams, "family", publicPackageFamilyValues());
+  const familyParam = parseEnumQueryParam(url.searchParams, "family", PACKAGE_FAMILY_VALUES);
   if (!familyParam.ok) return text(familyParam.message, 400, rate.headers);
   const channelParam = parseEnumQueryParam(url.searchParams, "channel", PACKAGE_CHANNEL_VALUES);
   if (!channelParam.ok) return text(channelParam.message, 400, rate.headers);
@@ -1752,8 +1749,9 @@ async function listPackages(
   if (!highlightedOnlyParam.ok) return text(highlightedOnlyParam.message, 400, rate.headers);
   const sortParam = parseEnumQueryParam(url.searchParams, "sort", PACKAGE_LIST_SORT_VALUES);
   if (!sortParam.ok) return text(sortParam.message, 400, rate.headers);
+  const effectiveFamily = family ?? familyParam.value;
   const rawCategory = url.searchParams.get("category")?.trim() || undefined;
-  const category = resolvePluginCategoryFilter(rawCategory);
+  const category = resolvePackageCategoryFilter(rawCategory, effectiveFamily);
   const topic = url.searchParams.get("topic")?.trim().toLowerCase() || undefined;
   const curated = parseBooleanQueryParam(url.searchParams, "curated");
   if (!curated.ok) return text(curated.message, 400, rate.headers);
@@ -1764,9 +1762,12 @@ async function listPackages(
     return text(excludedScanStatuses.message, 400, rate.headers);
   }
   if (rawCategory && !category) {
-    return text("Invalid plugin category", 400, rate.headers);
+    return text(
+      effectiveFamily === "claw" ? "Invalid Claw category" : "Invalid plugin category",
+      400,
+      rate.headers,
+    );
   }
-  const effectiveFamily = family ?? familyParam.value;
   const includeSkills = options?.includeSkills ?? effectiveFamily === undefined;
   const highlightedOnly = featured.value === true || highlightedOnlyParam.value === true;
   const pluginDefaultSort =
@@ -1778,12 +1779,7 @@ async function listPackages(
       : options?.defaultSort;
   const isLegacyInstallSortRequest = sortParam.value === "installs";
   const effectiveSort = normalizePublicPackageSort(sortParam.value ?? pluginDefaultSort);
-  if (
-    category &&
-    (effectiveFamily === "skill" ||
-      effectiveFamily === "claw" ||
-      (!effectiveFamily && includeSkills))
-  ) {
+  if (category && (effectiveFamily === "skill" || (!effectiveFamily && includeSkills))) {
     return text(
       "Plugin category is only supported for plugin package endpoints",
       400,
@@ -1820,7 +1816,7 @@ async function listPackages(
       isDone: boolean;
       continueCursor: string;
     }>(ctx, internalRefs.packages.listPluginDiscoveryCategoryInternal, {
-      category,
+      category: resolvePluginCategoryFilter(rawCategory),
       family: effectiveFamily,
       channel: channelParam.value,
       isOfficial: isOfficial.value,
@@ -4116,7 +4112,7 @@ async function searchPackages(
   const queryText = url.searchParams.get("q")?.trim() ?? "";
   if (!queryText) return text("Missing q query parameter", 400, rate.headers);
   const limit = Math.max(1, Math.min(toOptionalNumber(url.searchParams.get("limit")) ?? 20, 100));
-  const familyParam = parseEnumQueryParam(url.searchParams, "family", publicPackageFamilyValues());
+  const familyParam = parseEnumQueryParam(url.searchParams, "family", PACKAGE_FAMILY_VALUES);
   if (!familyParam.ok) return text(familyParam.message, 400, rate.headers);
   const channelParam = parseEnumQueryParam(url.searchParams, "channel", PACKAGE_CHANNEL_VALUES);
   if (!channelParam.ok) return text(channelParam.message, 400, rate.headers);
@@ -4135,19 +4131,23 @@ async function searchPackages(
   ) {
     return text("Invalid createdAfter", 400, rate.headers);
   }
+  const family = familyParam.value;
   const rawCategory = url.searchParams.get("category")?.trim() || undefined;
-  const category = resolvePluginCategoryFilter(rawCategory);
+  const category = resolvePackageCategoryFilter(rawCategory, family);
   const topic = url.searchParams.get("topic")?.trim().toLowerCase() || undefined;
   const excludedScanStatuses = parseExcludedScanStatuses(url.searchParams.get("excludeScanStatus"));
   if (!excludedScanStatuses.ok) {
     return text(excludedScanStatuses.message, 400, rate.headers);
   }
   if (rawCategory && !category) {
-    return text("Invalid plugin category", 400, rate.headers);
+    return text(
+      family === "claw" ? "Invalid Claw category" : "Invalid plugin category",
+      400,
+      rate.headers,
+    );
   }
-  const family = familyParam.value;
   const includeSkills = options?.includeSkills ?? family === undefined;
-  if (category && (family === "skill" || family === "claw" || (!family && includeSkills))) {
+  if (category && (family === "skill" || (!family && includeSkills))) {
     return text(
       "Plugin category is only supported for plugin package endpoints",
       400,
